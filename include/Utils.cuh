@@ -1,7 +1,7 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-// c++11 std lib includes
+// c++17 std lib includes
 #include <map>
 #include <cmath>
 #include <string>
@@ -14,6 +14,7 @@
 #include <iostream>
 #include <algorithm>
 
+#ifndef __cplusplus < 201703L
 namespace std {
 	template<class T>
 	constexpr const T& clamp( const T& v, const T& lo, const T& hi ) {
@@ -21,9 +22,20 @@ namespace std {
 	    return (v < lo) ? lo : (hi < v) ? hi : v;
 	}
 }
+#endif
+
+#ifndef uint
+using uint=unsigned int;
+#else
+#error
+#endif 
 
 // Window management
-#include <SDL2/SDL.h>
+#if defined(WIN32) || defined(_WIN32)
+	#include <SDL.h>
+#else
+	#include <SDL2/SDL.h>
+#endif
 
 // Graphics drawing
 #include <GL/glew.h>

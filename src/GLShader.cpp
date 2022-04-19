@@ -22,8 +22,8 @@ GLuint compileShaderProgram(std::string const & vertexSource, std::string const 
 		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &maxLength);
 
 		// The maxLength includes the NULL character
-		char infoLog[maxLength];
-		glGetShaderInfoLog(vertexShader, maxLength, &maxLength, &infoLog[0]);
+		char* infoLog = new char [maxLength];
+		glGetShaderInfoLog(vertexShader, maxLength, &maxLength, infoLog);
 
 		// We don't need the shader anymore.
 		glDeleteShader(vertexShader);
@@ -53,9 +53,9 @@ GLuint compileShaderProgram(std::string const & vertexSource, std::string const 
 		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &maxLength);
 
 		// The maxLength includes the NULL character
-		char infoLog[maxLength];
+		char* infoLog = new char [maxLength];
 		//std::vector<GLchar> infoLog(maxLength);
-		glGetShaderInfoLog(fragmentShader, maxLength, &maxLength, &infoLog[0]);
+		glGetShaderInfoLog(fragmentShader, maxLength, &maxLength, infoLog);
 
 		// We don't need the shader anymore.
 		glDeleteShader(fragmentShader);
@@ -90,8 +90,8 @@ GLuint compileShaderProgram(std::string const & vertexSource, std::string const 
 		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
 	
 		// The maxLength includes the NULL character
-		char infoLog[maxLength];
-		glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
+		char* infoLog = new char [maxLength];
+		glGetProgramInfoLog(program, maxLength, &maxLength, infoLog);
 		
 		// We don't need the program anymore.
 		glDeleteProgram(program);
