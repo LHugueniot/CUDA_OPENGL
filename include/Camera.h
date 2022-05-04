@@ -1,7 +1,8 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "Utils.cuh"
+#include "Utils/Eigen.h"
+#include "Utils/Math.h"
 
 struct Camera{
 
@@ -20,9 +21,9 @@ struct Camera{
 		float _rotationSpeed = 0.05f,
 		float _zoomSpeed = 0.05f);
 	
-	Matrix4f viewMat;
+	ei::Matrix4f viewMat;
 
-	Matrix4f projMat;
+	ei::Matrix4f projMat;
 
 	//Perspective Parameters
 	float windowWidth, windowHeight, fov, far, near;
@@ -32,20 +33,20 @@ struct Camera{
 
 	float rotationSpeed, zoomSpeed;
 
-	Vector3f target, eye, transformedEye;
+	ei::Vector3f target, eye, transformedEye;
 };
 
-void setProjMat(Eigen::Matrix4f & projMat,
+void setProjMat(ei::Matrix4f & projMat,
 	float windowWidth, 
     float windowHeight, 
     float fov, 
     float far, float near);
 void updateProjMat(Camera & camera);
 
-void setLookAt(Matrix4f & viewMat,
-	Vector3f const & position,
-	Vector3f const & target,
-	Vector3f const & up);
+void setLookAt(ei::Matrix4f & viewMat,
+	ei::Vector3f const & position,
+	ei::Vector3f const & target,
+	ei::Vector3f const & up);
 void updateLookAt(Camera & camera);
 
 void rotateCamera(Camera& camera, float rotateAngle);

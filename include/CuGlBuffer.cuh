@@ -1,12 +1,15 @@
 #ifndef CU_GL_BUFFER_CUH
 #define CU_GL_BUFFER_CUH
 
-#include "Utils.cuh"
+#include <iostream>
+#include <sstream>
+#include <vector>
 
-namespace spag{
+#include "Utils/CudaGL.cuh"
 
 template<typename T>
-struct cugl_buffer{
+struct cugl_buffer
+{
 	// Opengl vertex buffer object, use to draw
 	GLuint gl_VBO;
 
@@ -21,13 +24,15 @@ struct cugl_buffer{
 };
 
 template<typename T>
-bool allocate_cugl_buffer(cugl_buffer<T> * buffer_obj){
+bool allocate_cugl_buffer(cugl_buffer<T> * buffer_obj)
+{
 	auto & gl_VBO = buffer_obj->gl_VBO;
 	auto & cugl_pVBO = buffer_obj->cugl_pVBO;
 
 	glGenBuffers(1, &gl_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, gl_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(T) * buffer_obj->d_bufferSize, 0, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(T) * buffer_obj->d_bufferSize,
+    	0, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     cudaGraphicsGLRegisterBuffer(&cugl_pVBO, 
@@ -36,9 +41,12 @@ bool allocate_cugl_buffer(cugl_buffer<T> * buffer_obj){
 }
 
 template<typename T>
-bool set_cugl_buffer(cugl_buffer<T> * buffer_obj, T * h_pBuffer, size_t h_bufferSize){
-
+bool set_cugl_buffer(cugl_buffer<T> * buffer_obj,
+	T * h_pBuffer, size_t h_bufferSize)
+{
+	std::cout<<"Test"<<std::endl;
 	std::ostringstream oss;
+
 	oss<<"h_bufferSize: "<<h_bufferSize<<" buffer_obj->d_bufferSize:"
 			<<buffer_obj->d_bufferSize<<std::endl;
 	ASSERT_WITH_MESSAGE(h_bufferSize == buffer_obj->d_bufferSize, oss.str());
@@ -65,7 +73,8 @@ bool set_cugl_buffer(cugl_buffer<T> * buffer_obj, T * h_pBuffer, size_t h_buffer
 }
 
 template<typename T>
-bool set_cugl_buffer(cugl_buffer<T> * buffer_obj, std::vector<T> * h_buffer){
+bool set_cugl_buffer(cugl_buffer<T> * buffer_obj, std::vector<T> * h_buffer)
+{
 
 	assert(h_buffer->size() == buffer_obj->d_bufferSize);
 
@@ -82,14 +91,12 @@ bool set_cugl_buffer(cugl_buffer<T> * buffer_obj, std::vector<T> * h_buffer){
                                          cugl_pVBO);
 
 	// Copy copy data from host to device buffer
-	cudaMemcpy(d_pBuffer, h_buffer->data(), bufferSize, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_pBuffer, h_buffer->data(),
+		bufferSize, cudaMemcpyHostToDevice);
 
     // Unmap buffer object
     cudaGraphicsUnmapResources(1, &cugl_pVBO, 0);
     return true;
 }
-
-
-} // end namespace spag
 
 #endif /* CU_GL_BUFFER_CUH */

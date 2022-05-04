@@ -1,6 +1,7 @@
 #ifndef MONO_COLOUR_GL_SHADER_H
 #define MONO_COLOUR_GL_SHADER_H
 
+#include "Utils/OpenGl.h"
 #include "GLShader.h"
 
 static const char* vertexMonoColourSource =

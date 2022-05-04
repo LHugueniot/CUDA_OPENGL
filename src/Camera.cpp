@@ -1,3 +1,6 @@
+#include "Utils/Eigen.h"
+#include "Utils/Math.h"
+
 #include "Camera.h"
 
 Camera::Camera(
@@ -22,7 +25,7 @@ Camera::Camera(
     setProjMat(projMat, windowWidth, windowHeight, fov, far, near);
 }
 
-void setProjMat(Eigen::Matrix4f & projMat, float windowWidth, 
+void setProjMat(ei::Matrix4f & projMat, float windowWidth, 
     float windowHeight, float fov, float far, float near){
 
     projMat.setIdentity();
@@ -52,15 +55,16 @@ void rotateCamera(Camera& camera, float rotateAngle)
 {
     camera.yaw -= rotateAngle;
 
-    if (camera.yaw > M_PI)
-        camera.yaw -= 2.0 * M_PI;
-    else if (camera.yaw < -M_PI)
-        camera.yaw += 2.0 * M_PI;
+    if (camera.yaw > EIGEN_PI)
+        camera.yaw -= 2.0 * EIGEN_PI;
+    else if (camera.yaw < -EIGEN_PI)
+        camera.yaw += 2.0 * EIGEN_PI;
 }
 
 void pitchCamera(Camera& camera, float pitchAngle)
 {
-    camera.pitch = std::clamp(camera.pitch + pitchAngle, - .5f * (float)M_PI, .5f * (float)M_PI);
+    camera.pitch = std::clamp(camera.pitch + pitchAngle,
+        -.5f * (float)EIGEN_PI, .5f * (float)EIGEN_PI);
 }
 
 void zoomCamera(Camera& camera, float zoomAmount)
@@ -93,9 +97,11 @@ void moveCamera(Camera& camera, Camera::Actions action)
     }
 }
 
-void setLookAt(Matrix4f & viewMat, Vector3f const & position, Vector3f const & target, Vector3f const & up){
+void setLookAt(ei::Matrix4f & viewMat, ei::Vector3f const & position,
+    ei::Vector3f const & target, ei::Vector3f const & up)
+    {
 
-    Matrix3f R;
+    ei::Matrix3f R;
     R.col(2) = (position-target).normalized();
     R.col(0) = up.cross(R.col(2)).normalized();
     R.col(1) = R.col(2).cross(R.col(0));
@@ -106,20 +112,22 @@ void setLookAt(Matrix4f & viewMat, Vector3f const & position, Vector3f const & t
 
 void updateCamera(Camera& camera){
 
-    Matrix3f R_yaw; 
-    R_yaw = AngleAxisf(camera.yaw, Vector3f::UnitY());
-    Matrix3f R_pitch;
-    R_pitch = AngleAxisf(camera.pitch, Vector3f::UnitX());
-    camera.transformedEye = (R_yaw * R_pitch * (camera.zoom * (camera.eye - camera.target))) + camera.target;
-    setLookAt(camera.viewMat, camera.transformedEye, camera.target, Vector3f(0, 1, 0));
+    ei::Matrix3f R_yaw; 
+    R_yaw = ei::AngleAxisf(camera.yaw, ei::Vector3f::UnitY());
+    ei::Matrix3f R_pitch;
+    R_pitch = ei::AngleAxisf(camera.pitch, ei::Vector3f::UnitX());
+    camera.transformedEye = (R_yaw * R_pitch * (
+        camera.zoom * (camera.eye - camera.target))) + camera.target;
+    setLookAt(camera.viewMat, camera.transformedEye,
+        camera.target, ei::Vector3f(0, 1, 0));
 }
 
 /*
 
 void updateCamera(Camera& camera){
 
-    glm::dmat3 R_yaw = glm::mat3_cast(glm::angleAxis(camera.yaw, Vector3f(0.0, 1.0, 0.0)));
-    glm::dmat3 R_pitch = glm::mat3_cast(glm::angleAxis(camera.pitch, Vector3f(1.0, 0.0, 0.0)));
+    glm::dmat3 R_yaw = glm::mat3_cast(glm::angleAxis(camera.yaw, ei::Vector3f(0.0, 1.0, 0.0)));
+    glm::dmat3 R_pitch = glm::mat3_cast(glm::angleAxis(camera.pitch, ei::Vector3f(1.0, 0.0, 0.0)));
     camera.transformedEye = (R_yaw * R_pitch * (camera.zoom * (camera.eye-camera.target))) + camera.target;
     camera.viewMat = glm::lookAt(glm::vec3(camera.transformedEye), glm::vec3(camera.target), glm::vec3(0.0f,1.0f,0.0f));
 }
@@ -158,8 +166,8 @@ void moveCamera(Camera& camera, cameraActions action)
 			break;
 	}
 
-    glm::dmat3 R_yaw = glm::mat3_cast(glm::angleAxis(camera.yaw, Vector3f(0.0, 1.0, 0.0)));
-    glm::dmat3 R_pitch = glm::mat3_cast(glm::angleAxis(m_pitch, Vector3f(1.0, 0.0, 0.0)));
+    glm::dmat3 R_yaw = glm::mat3_cast(glm::angleAxis(camera.yaw, ei::Vector3f(0.0, 1.0, 0.0)));
+    glm::dmat3 R_pitch = glm::mat3_cast(glm::angleAxis(m_pitch, ei::Vector3f(1.0, 0.0, 0.0)));
     m_transformedEye = (R_yaw * R_pitch * (m_zoom * (m_eye-m_target))) + m_target;
     m_V = glm::lookAt(glm::vec3(m_transformedEye), glm::vec3(m_target), glm::vec3(0.0f,1.0f,0.0f));
 

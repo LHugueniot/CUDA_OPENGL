@@ -1,3 +1,8 @@
+#include <vector>
+
+#include "Utils/Eigen.h"
+#include "Utils/OpenGL.h"
+
 #include "PlaneGLData.h"
 
 void generateLine(std::vector<float> & planeVertices){

@@ -1,9 +1,12 @@
-//#ifdef  MAC_GRID_CUH
-//#define MAC_GRID_CUH
+#ifdef  MAC_GRID_CUH
+#define MAC_GRID_CUH
 
-#include "Utils.cuh"
+#include<iostream>
 
-class MacGrid{
+#include "Utils/OpenGL.h"
+
+class MacGrid
+{
 
 public:
     MacGrid(int _gridSize_i, int _gridSize_j, int _gridSize_k) :
@@ -61,4 +64,4 @@ void gridPressureTest() {
     return;
 }
 
-//#endif /* MAC_GRID_CUH */
+#endif /* MAC_GRID_CUH */
