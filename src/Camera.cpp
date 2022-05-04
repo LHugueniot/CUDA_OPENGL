@@ -4,9 +4,12 @@
 #include "Camera.h"
 
 Camera::Camera(
-    float _windowWidth, float _windowHeight, 
+    float _windowWidth, float _windowHeight,
+    ei::Vector3f const & _eye,
+    ei::Vector3f const & _target, 
     float _fov, float _far, float _near,
-    float _rotationSpeed, float _zoomSpeed
+    float _rotationSpeed, float _zoomSpeed,
+	float _xFormSpeed
     ) :
         windowWidth(_windowWidth),
         windowHeight(_windowHeight),
@@ -14,8 +17,9 @@ Camera::Camera(
         far(_far), near(_near),
         rotationSpeed(_rotationSpeed),
         zoomSpeed(_zoomSpeed),
-        eye(0.f, 0.f, 30.f),
-        target(0, 0, 0){
+        eye(_eye),
+        target(_target),
+        xFormSpeed(_xFormSpeed){
 
     transformedEye = eye;
     yaw = 0.f;
@@ -23,6 +27,7 @@ Camera::Camera(
     zoom = 1.f;
 
     setProjMat(projMat, windowWidth, windowHeight, fov, far, near);
+    updateCamera(*this);
 }
 
 void setProjMat(ei::Matrix4f & projMat, float windowWidth, 
@@ -72,6 +77,12 @@ void zoomCamera(Camera& camera, float zoomAmount)
     camera.zoom = std::clamp(camera.zoom + zoomAmount, 0.f, 10.f);
 }
 
+void translateCamera(Camera& camera, ei::Vector3f const& xForm)
+{
+    camera.eye += xForm;
+    camera.target += xForm;
+}
+
 void moveCamera(Camera& camera, Camera::Actions action)
 {    
     switch (action)
@@ -94,20 +105,41 @@ void moveCamera(Camera& camera, Camera::Actions action)
         case Camera::ZOOM_OUT:
             zoomCamera(camera, -camera.zoomSpeed);
             break;
+        case Camera::MOVE_X_P:
+            translateCamera(camera, {camera.xFormSpeed, 0, 0});
+            break;
+        case Camera::MOVE_X_M:
+            translateCamera(camera, {-camera.xFormSpeed, 0, 0});
+            break;
+        case Camera::MOVE_Y_P:
+            translateCamera(camera, {0, camera.xFormSpeed, 0});
+            break;
+        case Camera::MOVE_Y_M:
+            translateCamera(camera, {0, -camera.xFormSpeed, 0});
+            break;
+        case Camera::MOVE_Z_P:
+            translateCamera(camera, {0, 0, camera.xFormSpeed});
+            break;
+        case Camera::MOVE_Z_M:
+            translateCamera(camera, {0, 0, -camera.xFormSpeed});
+            break;
     }
 }
 
 void setLookAt(ei::Matrix4f & viewMat, ei::Vector3f const & position,
     ei::Vector3f const & target, ei::Vector3f const & up)
-    {
+{
+    ei::Vector3f direction = position != target ?
+                             position-target : 
+                             ei::Vector3f(1, 0, 0);
 
     ei::Matrix3f R;
     R.col(2) = (position-target).normalized();
     R.col(0) = up.cross(R.col(2)).normalized();
     R.col(1) = R.col(2).cross(R.col(0));
-    viewMat.topLeftCorner<3,3>() = R.transpose();
-    viewMat.topRightCorner<3,1>() = -R.transpose() * position;
-    viewMat(3,3) = 1.0f;
+    viewMat.topLeftCorner<3, 3>() = R.transpose();
+    viewMat.topRightCorner<3, 1>() = -R.transpose() * position;
+    viewMat(3, 3) = 1.0f;
 }
 
 void updateCamera(Camera& camera){

@@ -6,6 +6,7 @@
 #include "Geometry.cuh"
 #include "CuGlBuffer.cuh"
 
+#include "SimpleTriangle.h"
 
 //struct CUDA_GL_state{
 //    int deviceCount;
@@ -23,6 +24,8 @@
 //    cudaGLSetGLDevice(state.dev[0]);
 //    return state;
 //}
+
+
 
 int main(int argv, char** args)
 {
@@ -64,7 +67,7 @@ int main(int argv, char** args)
 
     glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
 
     //glfwSwapBuffers(mainWindow->m_glfwWindow);
@@ -79,6 +82,19 @@ int main(int argv, char** args)
     pitchCamera(camera,  TO_RAD(-45.f));
 
     updateCamera(camera);
+
+    using KEY_ID=int;
+    std::map<KEY_ID, Camera::Actions> cameraKeyToAction = {
+        {GLFW_KEY_W, Camera::ORBIT_UP},
+        {GLFW_KEY_A, Camera::ORBIT_LEFT},
+        {GLFW_KEY_S, Camera::ORBIT_RIGHT},
+        {GLFW_KEY_D, Camera::ORBIT_DOWN},
+
+        {GLFW_KEY_UP, Camera::MOVE_X_P},
+        {GLFW_KEY_LEFT, Camera::MOVE_Z_M},
+        {GLFW_KEY_RIGHT, Camera::MOVE_Z_P},
+        {GLFW_KEY_DOWN, Camera::MOVE_X_M}
+    };
 
     //=====================================SHADER SETUP=========================================
 
@@ -96,39 +112,55 @@ int main(int argv, char** args)
     std::cout<<"MESH DATA SETUP"<<std::endl;
     
     //Create center of world grid plain
+    /*
     std::vector<float> gridPlaneVertexData;
     generateTile(gridPlaneVertexData);
     generateLine(gridPlaneVertexData);
     generatePlaneVertexData(gridPlaneVertexData, 1, 6, 6);
     PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
     initPlaneVAO(gridPlane);
-
     Geometry test_geom(&gridPlaneVertexData, &monoColourShader);
+    */
+    SimpleTriangle triangle;
 
     std::cout<<"starting loop"<<std::endl;
 
     glfwMakeContextCurrent(mainWindow->m_glfwWindow);
-    glViewport(0, 0, mainWindow->m_windowWidth, mainWindow->m_windowHeight);
+    //glViewport(0, 0, mainWindow->m_windowWidth, mainWindow->m_windowHeight);
 
     while(!shouldQuit(glfwState))
     {
-        fprintf(stdout, "Drawing for window: %s\n", mainWindow->m_windowTitle.c_str());
+        //fprintf(stdout, "Drawing for window: %s\n", mainWindow->m_windowTitle.c_str());
 
 
         for (auto window : glfwState.m_windows)
         {
-            fprintf(stdout, "Drawing for window: %s\n", window->m_windowTitle.c_str());
             glfwMakeContextCurrent(window->m_glfwWindow);
 
-            glClearColor(1.f, .5f, .5f, 1.f);
+            glClearColor(.5f, .5f, .5f, 1.f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            for (auto [key, action] : cameraKeyToAction)
+            {
+                int state = glfwGetKey(window->m_glfwWindow, key);
+                if (state == GLFW_PRESS)
+                {
+                    std::cout<<"Key pressed: "<<key<<std::endl;
+                    moveCamera(camera, action);
+                }
+            }
+
+            updateCamera(camera);
+            ei::Matrix4f VP = camera.projMat * camera.viewMat;
+            triangle.draw(VP);
+            /*
             updateCamera(camera);
             ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
             // Main stuff
             updatePlaneVAO(gridPlane);
             drawPlane(gridPlane, cameraVP);
             drawGeom(test_geom, cameraVP);
-
+            */
 
             glfwSwapBuffers(window->m_glfwWindow);
             glfwPollEvents();

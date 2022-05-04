@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.23)
 #set(CMAKE_CUDA_COMPILER "C:/Program Files/LLVM/bin/clang++.exe")
 set(CMAKE_CXX_STANDARD 17)
 
+set(CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
+
 set(PROJECTNAME "CUDA_OPENGL")
 project(${PROJECTNAME} LANGUAGES CUDA CXX)
 

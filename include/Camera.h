@@ -4,7 +4,8 @@
 #include "Utils/Eigen.h"
 #include "Utils/Math.h"
 
-struct Camera{
+struct Camera
+{
 
 	enum Actions{
 		ORBIT_LEFT,
@@ -12,14 +13,23 @@ struct Camera{
 		ORBIT_UP,
 		ORBIT_DOWN,
 		ZOOM_IN,
-		ZOOM_OUT
+		ZOOM_OUT,
+		MOVE_X_P,
+		MOVE_X_M,
+		MOVE_Y_P,
+		MOVE_Y_M,
+		MOVE_Z_P,
+		MOVE_Z_M,
 	};
 
-	Camera(float _windowWidth, float _windowHeight, 
+	Camera(float _windowWidth, float _windowHeight,
+		ei::Vector3f const & _eye=ei::Vector3f(30, 30, 30),
+    	ei::Vector3f const & _target=ei::Vector3f(0, 0, 0), 
 		float _fov = TO_RAD(50), //In rads 
 		float _far = 200.f, float _near = 1.f,
 		float _rotationSpeed = 0.05f,
-		float _zoomSpeed = 0.05f);
+		float _zoomSpeed = 0.05f,
+		float _xFormSpeed=1.0f);
 	
 	ei::Matrix4f viewMat;
 
@@ -31,7 +41,7 @@ struct Camera{
 	//Trackball parameters
 	float yaw, pitch, zoom;
 
-	float rotationSpeed, zoomSpeed;
+	float rotationSpeed, zoomSpeed, xFormSpeed;
 
 	ei::Vector3f target, eye, transformedEye;
 };
@@ -52,6 +62,7 @@ void updateLookAt(Camera & camera);
 void rotateCamera(Camera& camera, float rotateAngle);
 void pitchCamera(Camera& camera, float pitchAngle);
 void zoomCamera(Camera& camera, float zoomAmount);
+void translateCamera(Camera& camera, ei::Vector3f& xForm);
 void moveCamera(Camera& camera, Camera::Actions action);
 
 void updateCamera(Camera& camera);
