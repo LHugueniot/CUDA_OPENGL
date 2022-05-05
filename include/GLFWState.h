@@ -20,6 +20,8 @@ struct Window
     std::string m_windowTitle;
     uint m_windowWidth;
     uint m_windowHeight;
+    float m_xScroll;
+    float m_yScroll;
     GLFWwindow* m_glfwWindow;
     bool m_initSuccessful;
 };

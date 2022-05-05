@@ -13,12 +13,12 @@ Camera::Camera(
     ) :
         windowWidth(_windowWidth),
         windowHeight(_windowHeight),
+        eye(_eye),
+        target(_target),
         fov(_fov),
         far(_far), near(_near),
         rotationSpeed(_rotationSpeed),
         zoomSpeed(_zoomSpeed),
-        eye(_eye),
-        target(_target),
         xFormSpeed(_xFormSpeed){
 
     transformedEye = eye;
@@ -27,7 +27,7 @@ Camera::Camera(
     zoom = 1.f;
 
     setProjMat(projMat, windowWidth, windowHeight, fov, far, near);
-    updateCamera(*this);
+    //updateCamera(*this);
 }
 
 void setProjMat(ei::Matrix4f & projMat, float windowWidth, 
@@ -39,12 +39,17 @@ void setProjMat(ei::Matrix4f & projMat, float windowWidth,
     float range = far - near;
     float invtan = 1./tan(theta);
 
-    projMat(0,0) = invtan / aspect;
-    projMat(1,1) = invtan;
-    projMat(2,2) = -(near + far) / range;
-    projMat(3,2) = -1;
-    projMat(2,3) = -2 * near * far / range;
-    projMat(3,3) = 0;
+    projMat <<  invtan/aspect, 0, 0, 0,
+                0, invtan, 0, 0,
+                0, 0, -(near+far)/range, -1,
+                0, 0, -2*near*far/range, 0;
+
+    //projMat(0,0) = invtan / aspect;
+    //projMat(1,1) = invtan;
+    //projMat(2,2) = -(near + far) / range;
+    //projMat(3,2) = -1;
+    //projMat(2,3) = -2 * near * far / range;
+    //projMat(3,3) = 0;
 }
 
 void updateProjMat(Camera & camera){
@@ -60,16 +65,16 @@ void rotateCamera(Camera& camera, float rotateAngle)
 {
     camera.yaw -= rotateAngle;
 
-    if (camera.yaw > EIGEN_PI)
-        camera.yaw -= 2.0 * EIGEN_PI;
-    else if (camera.yaw < -EIGEN_PI)
-        camera.yaw += 2.0 * EIGEN_PI;
+    if (camera.yaw > M_PI)
+        camera.yaw -= 2.0 * M_PI;
+    else if (camera.yaw < -M_PI)
+        camera.yaw += 2.0 * M_PI;
 }
 
 void pitchCamera(Camera& camera, float pitchAngle)
 {
     camera.pitch = std::clamp(camera.pitch + pitchAngle,
-        -.5f * (float)EIGEN_PI, .5f * (float)EIGEN_PI);
+        -.5f * (float)M_PI, .5f * (float)M_PI);
 }
 
 void zoomCamera(Camera& camera, float zoomAmount)
@@ -129,9 +134,9 @@ void moveCamera(Camera& camera, Camera::Actions action)
 void setLookAt(ei::Matrix4f & viewMat, ei::Vector3f const & position,
     ei::Vector3f const & target, ei::Vector3f const & up)
 {
-    ei::Vector3f direction = position != target ?
-                             position-target : 
-                             ei::Vector3f(1, 0, 0);
+    //ei::Vector3f direction = position != target ?
+    //                         position-target : 
+    //                         ei::Vector3f(1, 0, 0);
 
     ei::Matrix3f R;
     R.col(2) = (position-target).normalized();

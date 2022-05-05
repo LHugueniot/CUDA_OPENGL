@@ -25,16 +25,14 @@
 //    return state;
 //}
 
-
-
 int main(int argv, char** args)
 {
 
-    std::cout<<"Start of main"<<std::endl;
+    fprintf(stdout, "Start of main.\n");
 
     //=====================================GLEW/GLFW SETUP=======================================
 
-    std::cout<<"GLEW/GLFW SETUP"<<std::endl;
+    fprintf(stdout, "GLEW/GLFW SETUP\n");
 
     // Initialize GLFW
     auto glfwState = setupGLFW(4, 6);
@@ -45,7 +43,7 @@ int main(int argv, char** args)
 	glfwMakeContextCurrent(mainWindow->m_glfwWindow);
 
     fprintf(stdout, "Adding window result: %i\n", windowAddedResult);
-    fprintf(stdout, "m_windows size: %i", glfwState.m_windows.size());
+    fprintf(stdout, "m_windows size: %i\n", (int)glfwState.m_windows.size());
 
     if (glewInit() != GLEW_OK)
     {
@@ -56,14 +54,14 @@ int main(int argv, char** args)
     //=====================================CUDA SETUP===========================================
     // Initialize CUDA context (on top of the GL context)
 
-    std::cout<<"CUDA SETUP"<<std::endl;
+    fprintf(stdout, "CUDA SETUP\n");
 
     cudaSetDevice(0);
     cudaGLSetGLDevice(0);
 
     //=====================================OPENGL SETUP=========================================
     
-    std::cout<<"OPENGL SETUP"<<std::endl;
+    fprintf(stdout, "OPENGL SETUP\n");
 
     glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -74,31 +72,37 @@ int main(int argv, char** args)
 
     //=====================================CAMERA SETUP=========================================
 
-    std::cout<<"CAMERA SETUP"<<std::endl;
+    fprintf(stdout, "CAMERA SETUP\n");
 
     auto camera = Camera(mainWindow->m_windowWidth, mainWindow->m_windowHeight);
 
-    rotateCamera(camera, TO_RAD(-45.f));
-    pitchCamera(camera,  TO_RAD(-45.f));
+    //rotateCamera(camera, TO_RAD(-45.f));
+    //pitchCamera(camera,  TO_RAD(-45.f));
 
     updateCamera(camera);
 
     using KEY_ID=int;
     std::map<KEY_ID, Camera::Actions> cameraKeyToAction = {
-        {GLFW_KEY_W, Camera::ORBIT_UP},
-        {GLFW_KEY_A, Camera::ORBIT_LEFT},
-        {GLFW_KEY_S, Camera::ORBIT_RIGHT},
-        {GLFW_KEY_D, Camera::ORBIT_DOWN},
-
-        {GLFW_KEY_UP, Camera::MOVE_X_P},
-        {GLFW_KEY_LEFT, Camera::MOVE_Z_M},
-        {GLFW_KEY_RIGHT, Camera::MOVE_Z_P},
-        {GLFW_KEY_DOWN, Camera::MOVE_X_M}
+        {GLFW_KEY_UP, Camera::ORBIT_UP},
+        {GLFW_KEY_LEFT, Camera::ORBIT_LEFT},
+        {GLFW_KEY_RIGHT, Camera::ORBIT_RIGHT},
+        {GLFW_KEY_DOWN, Camera::ORBIT_DOWN}
     };
+    //std::map<KEY_ID, Camera::Actions> cameraKeyToAction = {
+    //    {GLFW_KEY_W, Camera::ORBIT_UP},
+    //    {GLFW_KEY_A, Camera::ORBIT_LEFT},
+    //    {GLFW_KEY_S, Camera::ORBIT_RIGHT},
+    //    {GLFW_KEY_D, Camera::ORBIT_DOWN},
+//
+    //    {GLFW_KEY_UP, Camera::MOVE_X_P},
+    //    {GLFW_KEY_LEFT, Camera::MOVE_Z_M},
+    //    {GLFW_KEY_RIGHT, Camera::MOVE_Z_P},
+    //    {GLFW_KEY_DOWN, Camera::MOVE_X_M}
+    //};
 
     //=====================================SHADER SETUP=========================================
 
-    std::cout<<"SHADER SETUP"<<std::endl;
+    fprintf(stdout, "SHADER SETUP\n");
     
     GLuint monoColourShader = compileMonoColourShaderProgram();
     if (monoColourShader == 0)
@@ -107,23 +111,22 @@ int main(int argv, char** args)
         return EXIT_FAILURE;
     }
 
+    check_gl_error();
     //=====================================MESH DATA SETUP====================================
 
-    std::cout<<"MESH DATA SETUP"<<std::endl;
+    fprintf(stdout, "MESH SETUP\n");
     
     //Create center of world grid plain
-    /*
     std::vector<float> gridPlaneVertexData;
-    generateTile(gridPlaneVertexData);
-    generateLine(gridPlaneVertexData);
+    //generateTile(gridPlaneVertexData);
+    //generateLine(gridPlaneVertexData);
     generatePlaneVertexData(gridPlaneVertexData, 1, 6, 6);
     PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
     initPlaneVAO(gridPlane);
+    /*
     Geometry test_geom(&gridPlaneVertexData, &monoColourShader);
     */
     SimpleTriangle triangle;
-
-    std::cout<<"starting loop"<<std::endl;
 
     glfwMakeContextCurrent(mainWindow->m_glfwWindow);
     //glViewport(0, 0, mainWindow->m_windowWidth, mainWindow->m_windowHeight);
@@ -145,101 +148,43 @@ int main(int argv, char** args)
                 int state = glfwGetKey(window->m_glfwWindow, key);
                 if (state == GLFW_PRESS)
                 {
-                    std::cout<<"Key pressed: "<<key<<std::endl;
+                    //std::cout<<"Key pressed: "<<key<<std::endl;
                     moveCamera(camera, action);
                 }
             }
+            if (window->m_yScroll > 0)
+            {
+                moveCamera(camera, Camera::ZOOM_IN);
+                window->m_yScroll = 0;
+                std::cout<<"ZOOM_IN"<<std::endl;
+            }
+            else if(window->m_yScroll < 0)
+            {
+                moveCamera(camera, Camera::ZOOM_OUT);
+                std::cout<<"ZOOM_OUT"<<std::endl;
+                window->m_yScroll = 0;
+            }
+            
 
             updateCamera(camera);
-            ei::Matrix4f VP = camera.projMat * camera.viewMat;
-            triangle.draw(VP);
+            ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
+            //std::cout<<VP<<std::endl;
+            triangle.draw(cameraVP);
             /*
             updateCamera(camera);
             ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
             // Main stuff
-            updatePlaneVAO(gridPlane);
-            drawPlane(gridPlane, cameraVP);
-            drawGeom(test_geom, cameraVP);
             */
+            //updatePlaneVAO(gridPlane);
+            drawPlane(gridPlane, cameraVP);
+            //drawGeom(test_geom, cameraVP);
+            check_gl_error();
 
             glfwSwapBuffers(window->m_glfwWindow);
             glfwPollEvents();
         }
     }
 
-
-    //while(!quit)
-    //{
-    //    std::cout<<"tick"<<std::endl;
-    //    SDL_Event event;
-    //    if (SDL_PollEvent(&event) != 0){
-    //        switch (event.type){
-    //            case SDL_QUIT:
-    //                quit = true;
-    //                break;
-//
-    //            case SDL_KEYDOWN:
-    //                switch(event.key.keysym.sym){
-    //                case SDLK_LEFT:
-    //                    moveCamera(camera, Camera::ORBIT_LEFT);
-    //                    std::cout<<"SDLK_LEFT"<<std::endl;
-    //                    break;
-    //                case SDLK_RIGHT:
-    //                    moveCamera(camera, Camera::ORBIT_RIGHT);
-    //                    std::cout<<"SDLK_RIGHT"<<std::endl;
-    //                    break;
-    //                case SDLK_UP:
-    //                    moveCamera(camera, Camera::ORBIT_UP);
-    //                    std::cout<<"SDLK_UP"<<std::endl;
-    //                    break;
-    //                case SDLK_DOWN:
-    //                    moveCamera(camera, Camera::ORBIT_DOWN);
-    //                    std::cout<<"SDLK_DOWN"<<std::endl;
-    //                    break;
-    //                case SDLK_e:{
-    //                    spag::Geometry test_geom2(&gridPlaneVertexData, &monoColourShader);
-    //                    
-    //                }
-    //                    break;
-//
-    //                case SDLK_w:
-    //                    //spag::translateGeom(test_geom, float3{0,0.0001,0});
-    //                    spag::addToBufferVertex<<<1, static_cast<int>((float)test_geom.buffer.d_bufferSize/3.f)>>>
-    //                        (float3{0,0.01,0}, test_geom.buffer.d_pBuffer, test_geom.buffer.d_bufferSize);
-    //                    break;
-    //                }
-    //                break;
-//
-    //            case SDL_MOUSEWHEEL:
-    //                if(event.wheel.y < 0)       // scroll up
-    //                    moveCamera(camera, Camera::ZOOM_IN);
-    //                else if(event.wheel.y > 0)  // scroll down
-    //                    moveCamera(camera, Camera::ZOOM_OUT);
-    //                break;
-    //        }
-    //    }
-//
-    //    glClearColor(.5f, 0.5f, 0.5f, 1.f);
-    //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-    //    updateCamera(camera);
-    //    Matrix4f cameraVP = camera.projMat * camera.viewMat;
-//
-    //    // Main stuff
-    //    updatePlaneVAO(gridPlane);
-    //    drawPlane(gridPlane, cameraVP);
-//
-    //    drawGeom(test_geom, cameraVP);
-//
-    //    glColor3f(0.0f,0.0f,1.0f); //blue color
-    //    glBegin(GL_POINTS); //starts drawing of points
-    //        glVertex3f(1.0f,1.0f,0.0f);//upper-right corner
-    //        glVertex3f(-1.0f,-1.0f,0.0f);//lower-left corner
-    //    glEnd();//end drawing of points
-//
-    //    SDL_GL_SwapWindow(state_sdl.window);
-    //}
-    //
     teardown(glfwState);
     return EXIT_SUCCESS;
 }

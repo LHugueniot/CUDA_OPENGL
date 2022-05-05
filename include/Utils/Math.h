@@ -1,6 +1,9 @@
 #ifndef UTIL_MATH_H
 #define UTIL_MATH_H
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #define RAD_RATIO 0.01745329251
 #define TO_RAD(deg) deg * RAD_RATIO
 

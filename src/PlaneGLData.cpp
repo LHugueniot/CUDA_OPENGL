@@ -78,7 +78,7 @@ void initPlaneVAO(PlaneGLData & glData){
 
     glData.verticesSize = glData.vertices->size();
     glGenBuffers(1, &glData.verticesBufferObject);
-    updatePlaneVAO(glData);
+    updatePlaneVBO(glData);
 
     glGenVertexArrays(1, &glData.verticesArrayObject);
     glBindVertexArray(glData.verticesArrayObject);
@@ -87,7 +87,7 @@ void initPlaneVAO(PlaneGLData & glData){
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
-void updatePlaneVAO(PlaneGLData const & glData){
+void updatePlaneVBO(PlaneGLData const & glData){
 
     glBindBuffer(GL_ARRAY_BUFFER, glData.verticesBufferObject);
     glBufferData(GL_ARRAY_BUFFER,

@@ -23,10 +23,10 @@ struct Camera
 	};
 
 	Camera(float _windowWidth, float _windowHeight,
-		ei::Vector3f const & _eye=ei::Vector3f(30, 30, 30),
-    	ei::Vector3f const & _target=ei::Vector3f(0, 0, 0), 
-		float _fov = TO_RAD(50), //In rads 
-		float _far = 200.f, float _near = 1.f,
+		ei::Vector3f const & _eye={0, 0, 30},
+    	ei::Vector3f const & _target={0, 0, 0},
+		float _fov = TO_RAD(90), //In rads 
+		float _far = 200.f, float _near = 0.1f,
 		float _rotationSpeed = 0.05f,
 		float _zoomSpeed = 0.05f,
 		float _xFormSpeed=1.0f);

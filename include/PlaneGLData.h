@@ -37,7 +37,7 @@ void generateTile(std::vector<float> & gridVertices);
 void generateLine(std::vector<float> & gridVertices);
 
 void initPlaneVAO(PlaneGLData & glData);
-void updatePlaneVAO(PlaneGLData const & glData);
+void updatePlaneVBO(PlaneGLData const & glData);
 void drawPlane(PlaneGLData const & glData, Eigen::Matrix4f & cameraMat);
 
 #endif /* PLANE_GL_DATA_H */

@@ -12,7 +12,7 @@ static const char* vertexMonoColourSource =
 "out vec3 frag_colour;\n"
 "void main() {\n"
 "	frag_colour = base_colour;\n"
-"  	gl_Position = MVP * vec4(vertex_position, 1.0);\n"
+"  	gl_Position =  vec4(vertex_position, 1.0) * MVP;\n"
 "}\n";
 
 static const char *fragmentMonoColourSource =

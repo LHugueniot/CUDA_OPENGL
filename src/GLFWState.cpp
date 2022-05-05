@@ -29,6 +29,8 @@ void _keyPressed(GLFWwindow* window,
 
 void _framebufferSizeChanged(GLFWwindow* window, int width, int height);
 
+void _scrolled(GLFWwindow* window, double xoffset, double yoffset);
+
 
 GLFWState setupGLFW(int glMajorVersion, int glMinorVersion)
 {
@@ -114,6 +116,8 @@ WinPtr createWindow(std::string const& windowTitle,
     window->m_windowTitle = windowTitle;
     window->m_windowWidth = windowWidth;
     window->m_windowHeight = windowHeight;
+    window->m_xScroll = 0;
+    window->m_yScroll = 0;
     window->m_glfwWindow = glfwCreateWindow(windowWidth,
         windowHeight, windowTitle.c_str(), NULL, NULL);
     window->m_initSuccessful = false;
@@ -127,6 +131,8 @@ WinPtr createWindow(std::string const& windowTitle,
         glfwSetWindowCloseCallback(window->m_glfwWindow, _windowClosing);
 
         glfwSetKeyCallback(window->m_glfwWindow, _keyPressed);
+
+        glfwSetScrollCallback(window->m_glfwWindow, _scrolled);
 
         window->m_initSuccessful = true;
     }
@@ -148,7 +154,7 @@ void _handleError(int error, const char* description)
 void _windowClosing(GLFWwindow* window)
 {
     auto windowIt = g_windowToContext.find(window);
-    if(windowIt != g_windowToContext.end())
+    if(windowIt == g_windowToContext.end())
         return;
     auto windowTitle = windowIt->second->m_windowTitle;
     fprintf(stdout, "Closing window: %s\n", windowTitle.c_str());
@@ -157,7 +163,7 @@ void _windowClosing(GLFWwindow* window)
 void _keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     auto windowIt = g_windowToContext.find(window);
-    if(windowIt != g_windowToContext.end())
+    if(windowIt == g_windowToContext.end())
         return;
     auto windowTitle = windowIt->second->m_windowTitle;
     fprintf(stdout, "Key pressed for: %s\n", windowTitle.c_str());
@@ -165,10 +171,20 @@ void _keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
+void _scrolled(GLFWwindow* window, double xoffset, double yoffset)
+{
+    fprintf(stdout, "Scrolling in: x(%f) y(%f)\n", xoffset, yoffset);
+    auto windowIt = g_windowToContext.find(window);
+    if(windowIt == g_windowToContext.end())
+        return;
+    windowIt->second->m_xScroll = xoffset;
+    windowIt->second->m_yScroll = yoffset;
+}
+
 void _framebufferSizeChanged(GLFWwindow* window, int width, int height)
 {
     auto windowIt = g_windowToContext.find(window);
-    if(windowIt != g_windowToContext.end())
+    if(windowIt == g_windowToContext.end())
         return;
     auto windowTitle = windowIt->second->m_windowTitle;
     fprintf(stdout, "Window size changed for: %s\n", windowTitle.c_str());
