@@ -9,9 +9,9 @@
 #include "Utils/General.h"
 
 static int kGlMajorVersion = 3;
-static int kGlMinorVersion = 2;
-static uint kDefaultWindowWidth = 1280;
-static uint kDefaultWindowHeight = 720;
+static int kGlMinorVersion = 4;
+static uint kDefaultWindowWidth = 1920;
+static uint kDefaultWindowHeight = 1080;
 
 struct Window
 {

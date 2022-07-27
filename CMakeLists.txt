@@ -56,6 +56,7 @@ list(APPEND CMAKE_PREFIX_PATH ${EXTERNAL_LIB_DIRS})
 set(EXTERNAL_LIB_INCLUDES
     "C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0/include"
     "C:/Users/lucciano/Workspace/Libs/bin/eigen"
+    "C:/Users/lucciano/Workspace/Libs/Bin/glm/GLM-0.9.9.8"
 )
 
 # OpenGL setup

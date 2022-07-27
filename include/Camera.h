@@ -25,8 +25,8 @@ struct Camera
 	Camera(float _windowWidth, float _windowHeight,
 		ei::Vector3f const & _eye={0, 0, 30},
     	ei::Vector3f const & _target={0, 0, 0},
-		float _fov = TO_RAD(90), //In rads 
-		float _far = 200.f, float _near = 0.1f,
+		float _fov = TO_RAD(50), //In rads 
+		float _far = 200.f, float _near = 1.f,
 		float _rotationSpeed = 0.05f,
 		float _zoomSpeed = 0.05f,
 		float _xFormSpeed=1.0f);
@@ -59,7 +59,7 @@ void setLookAt(ei::Matrix4f & viewMat,
 	ei::Vector3f const & up);
 void updateLookAt(Camera & camera);
 
-void rotateCamera(Camera& camera, float rotateAngle);
+void yawCamera(Camera& camera, float yawAngle);
 void pitchCamera(Camera& camera, float pitchAngle);
 void zoomCamera(Camera& camera, float zoomAmount);
 void translateCamera(Camera& camera, ei::Vector3f& xForm);

@@ -2,6 +2,7 @@
 #include "Utils/Math.h"
 
 #include "Camera.h"
+#include <iostream>
 
 Camera::Camera(
     float _windowWidth, float _windowHeight,
@@ -19,8 +20,10 @@ Camera::Camera(
         far(_far), near(_near),
         rotationSpeed(_rotationSpeed),
         zoomSpeed(_zoomSpeed),
-        xFormSpeed(_xFormSpeed){
-
+        xFormSpeed(_xFormSpeed)
+{
+    std::cout<<"eye: "<<_eye<<std::endl;
+    std::cout<<"target: "<<_target<<std::endl;
     transformedEye = eye;
     yaw = 0.f;
     pitch = 0.f;
@@ -31,7 +34,8 @@ Camera::Camera(
 }
 
 void setProjMat(ei::Matrix4f & projMat, float windowWidth, 
-    float windowHeight, float fov, float far, float near){
+    float windowHeight, float fov, float far, float near)
+{
 
     projMat.setIdentity();
     float aspect = float(windowWidth)/float(windowHeight);
@@ -39,20 +43,18 @@ void setProjMat(ei::Matrix4f & projMat, float windowWidth,
     float range = far - near;
     float invtan = 1./tan(theta);
 
-    projMat <<  invtan/aspect, 0, 0, 0,
-                0, invtan, 0, 0,
-                0, 0, -(near+far)/range, -1,
-                0, 0, -2*near*far/range, 0;
+    projMat(0,0) = invtan / aspect;
+    projMat(1,1) = invtan;
+    projMat(2,2) = -(near + far) / range;
+    projMat(3,2) = -1;
+    projMat(2,3) = -2 * near * far / range;
+    projMat(3,3) = 0;
 
-    //projMat(0,0) = invtan / aspect;
-    //projMat(1,1) = invtan;
-    //projMat(2,2) = -(near + far) / range;
-    //projMat(3,2) = -1;
-    //projMat(2,3) = -2 * near * far / range;
-    //projMat(3,3) = 0;
+    projMat.transposeInPlace();
 }
 
-void updateProjMat(Camera & camera){
+void updateProjMat(Camera & camera)
+{
     setProjMat(camera.projMat, 
         camera.windowWidth,
         camera.windowHeight,
@@ -61,9 +63,9 @@ void updateProjMat(Camera & camera){
         camera.near);
 }
 
-void rotateCamera(Camera& camera, float rotateAngle)
+void yawCamera(Camera& camera, float yawAngle)
 {
-    camera.yaw -= rotateAngle;
+    camera.yaw -= yawAngle;
 
     if (camera.yaw > M_PI)
         camera.yaw -= 2.0 * M_PI;
@@ -89,14 +91,14 @@ void translateCamera(Camera& camera, ei::Vector3f const& xForm)
 }
 
 void moveCamera(Camera& camera, Camera::Actions action)
-{    
+{
     switch (action)
     {
         case Camera::ORBIT_LEFT:
-            rotateCamera(camera, camera.rotationSpeed);
+            yawCamera(camera, camera.rotationSpeed);
             break;
         case Camera::ORBIT_RIGHT:
-            rotateCamera(camera, -camera.rotationSpeed);
+            yawCamera(camera, -camera.rotationSpeed);
             break;
         case Camera::ORBIT_UP:
             pitchCamera(camera, -camera.rotationSpeed);
@@ -137,6 +139,7 @@ void setLookAt(ei::Matrix4f & viewMat, ei::Vector3f const & position,
     //ei::Vector3f direction = position != target ?
     //                         position-target : 
     //                         ei::Vector3f(1, 0, 0);
+    viewMat.setZero();
 
     ei::Matrix3f R;
     R.col(2) = (position-target).normalized();
@@ -145,9 +148,12 @@ void setLookAt(ei::Matrix4f & viewMat, ei::Vector3f const & position,
     viewMat.topLeftCorner<3, 3>() = R.transpose();
     viewMat.topRightCorner<3, 1>() = -R.transpose() * position;
     viewMat(3, 3) = 1.0f;
+
+    viewMat.transposeInPlace();
 }
 
-void updateCamera(Camera& camera){
+void updateCamera(Camera& camera)
+{
 
     ei::Matrix3f R_yaw; 
     R_yaw = ei::AngleAxisf(camera.yaw, ei::Vector3f::UnitY());
@@ -156,7 +162,7 @@ void updateCamera(Camera& camera){
     camera.transformedEye = (R_yaw * R_pitch * (
         camera.zoom * (camera.eye - camera.target))) + camera.target;
     setLookAt(camera.viewMat, camera.transformedEye,
-        camera.target, ei::Vector3f(0, 1, 0));
+        camera.target, ei::Vector3f::UnitY());
 }
 
 /*
