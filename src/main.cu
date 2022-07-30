@@ -43,7 +43,7 @@ void print_glm_mat4(glm::mat4 & mat)
 }
 
 
-int main2(int argv, char** args)
+int main1(int argv, char** args)
 {
     float radians_fov = 45.0f;
     float windowWidth = 1920.f;
@@ -70,7 +70,8 @@ int main2(int argv, char** args)
     setProjMat(ei_projection, windowWidth, windowHeight, TO_RAD(fov), far, near);
     setLookAt(ei_view, {0, 0, 30}, {0, 0, 0}, {0, 1, 0});
 
-    ei::Matrix4f ei_PV = ei_projection.transpose() * ei_view.transpose();
+    //ei::Matrix4f ei_PV = ei_projection.transpose() * ei_view.transpose();
+    ei::Matrix4f ei_PV = ei_projection * ei_view;
 
     assert(TO_RAD(fov) == glm::radians(radians_fov));
 
@@ -254,7 +255,8 @@ int main(int argv, char** args)
             updatePlaneVBO(gridPlane);
 
             updateCamera(camera);
-            ei::Matrix4f cameraVP = camera.projMat.transpose() * camera.viewMat.transpose();
+            //ei::Matrix4f cameraVP = camera.projMat.transpose() * camera.viewMat.transpose();
+            ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
             //cameraVP.transpose();
             std::cout<<cameraVP<<std::endl;
             //triangle.draw(cameraVP);
