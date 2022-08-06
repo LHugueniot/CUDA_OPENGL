@@ -48,20 +48,8 @@ struct Camera
 	ei::Vector3f target, eye, transformedEye;
 };
 
-void setProjMat(
-	ei::Matrix4f & projMat,
-	float windowWidth, 
-    float windowHeight, 
-    float fov, 
-    float far,
-	float near);
 void updateProjMat(Camera & camera);
 
-void setLookAt(
-	ei::Matrix4f & viewMat,
-	ei::Vector3f const & position,
-	ei::Vector3f const & target,
-	ei::Vector3f const & up);
 void updateLookAt(Camera & camera);
 
 void yawCamera(Camera& camera, float yawAngle);
