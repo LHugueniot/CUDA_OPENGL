@@ -1,3 +1,6 @@
+
+#include "Utils/ImGUI.h"
+
 #include "Camera.h"
 #include "GLFWState.h"
 #include "MacGrid.cuh"
@@ -5,9 +8,6 @@
 #include "MonoColourGLShader.h"
 #include "Geometry.cuh"
 #include "CuGlBuffer.cuh"
-
-#include "SimpleTriangle.h"
-
 
 //struct CUDA_GL_state{
 //    int deviceCount;
@@ -26,6 +26,32 @@
 //    return state;
 //}
 
+
+void ImGuiHelloWorld(bool showDemoWindow, ImVec4& clearColor)
+{
+    static float f = 0.0f;
+    static int counter = 0;
+
+    ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+    ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+    ImGui::Checkbox("Demo Window", &showDemoWindow);      // Edit bools storing our window open/close state
+    ImGui::Checkbox("Another Window", &showDemoWindow);
+
+    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+    ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
+
+    if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+        counter++;
+    ImGui::SameLine();
+    ImGui::Text("counter = %d", counter);
+
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                1000.0f / ImGui::GetIO().Framerate,
+                ImGui::GetIO().Framerate);
+    ImGui::End();
+}
+
 int main(int argv, char** args)
 {
 
@@ -33,10 +59,15 @@ int main(int argv, char** args)
 
     //=====================================GLEW/GLFW SETUP=======================================
 
+    int glMajorVersion = 4;
+    int glMinorVersion = 6;
+    const char * glslVersion = "#version 330";
+
+
     fprintf(stdout, "GLEW/GLFW SETUP\n");
 
     // Initialize GLFW
-    auto glfwState = setupGLFW(4, 6);
+    auto glfwState = setupGLFW(glMajorVersion, glMinorVersion);
 
     // Create a GLFW window
     auto mainWindow = createWindow("Main Window");
@@ -52,6 +83,25 @@ int main(int argv, char** args)
         return EXIT_FAILURE;
     }
 
+    //=====================================IMGUI SETUP==========================================
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(mainWindow->m_glfwWindow, true);
+    ImGui_ImplOpenGL3_Init(glslVersion);
+
+    bool showDemoWindow = true;
+
     //=====================================CUDA SETUP===========================================
     // Initialize CUDA context (on top of the GL context)
 
@@ -64,7 +114,12 @@ int main(int argv, char** args)
     
     fprintf(stdout, "OPENGL SETUP\n");
 
-    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
+    ImVec4 clearColor = {0.5f, 0.5f, 0.5f, 1.f};
+
+    glClearColor(clearColor.x * clearColor.w,
+                 clearColor.y * clearColor.w,
+                 clearColor.z * clearColor.w,
+                 clearColor.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
@@ -124,11 +179,9 @@ int main(int argv, char** args)
     generatePlaneVertexData(gridPlaneVertexData, 1, 6, 6);
     PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
     initPlaneVAO(gridPlane);
+    Geometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
     /*
-    Geometry test_geom(&gridPlaneVertexData, &monoColourShader);
     */
-    SimpleTriangle triangle;
-
     glfwMakeContextCurrent(mainWindow->m_glfwWindow);
     //glViewport(0, 0, mainWindow->m_windowWidth, mainWindow->m_windowHeight);
 
@@ -141,8 +194,15 @@ int main(int argv, char** args)
         {
             glfwMakeContextCurrent(window->m_glfwWindow);
 
-            glClearColor(.5f, .5f, .5f, 1.f);
+            glClearColor(clearColor.x * clearColor.w,
+                         clearColor.y * clearColor.w,
+                         clearColor.z * clearColor.w,
+                         clearColor.w);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            // Handle interaction
+            // TODO: handle better than.. this?
+            glfwPollEvents();
 
             for (auto [key, action] : cameraKeyToAction)
             {
@@ -165,27 +225,33 @@ int main(int argv, char** args)
                 std::cout<<"ZOOM_OUT"<<std::endl;
                 window->m_yScroll = 0;
             }
-            
-            updatePlaneVBO(gridPlane);
+
+            // Start ImGui frame
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            ImGuiHelloWorld(showDemoWindow, clearColor);
+
+            ImGui::Render();
+
+            // Draw geometry
+            //updatePlaneVBO(gridPlane);
 
             updateCamera(camera);
             //ei::Matrix4f cameraVP = camera.projMat.transpose() * camera.viewMat.transpose();
             ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
             //cameraVP.transpose();
             std::cout<<cameraVP<<std::endl;
-            triangle.draw(cameraVP);
-            /*
-            updateCamera(camera);
-            ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
-            // Main stuff
-            */
             //updatePlaneVAO(gridPlane);
-            drawPlane(gridPlane, cameraVP);
-            //drawGeom(test_geom, cameraVP);
+            //drawPlane(gridPlane, cameraVP);
+            drawGeom(gridPlaneCu, cameraVP);
             check_gl_error();
 
+            // Overlay imgui stuff
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
             glfwSwapBuffers(window->m_glfwWindow);
-            glfwPollEvents();
         }
     }
 

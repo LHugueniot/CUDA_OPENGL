@@ -1,1 +1,0 @@
-nvcc src/* -I/usr/include -Iinclude -I/usr/include/eigen3 -lGLEW -lGL -lSDL2 -lcudart -o a.out

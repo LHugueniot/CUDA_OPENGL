@@ -51,6 +51,20 @@ target_compile_options(cuda_opengl_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
 target_include_directories(cuda_opengl_lib PUBLIC ${CUDA_OPENGL_HEADER_DIR})
 set_target_properties(cuda_opengl_lib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
+# External libs
+
+set(IMGUI_ROOT C:/Users/lucciano/Workspace/Libs/Bin/imgui/imgui-1.88)
+set(IMGUI_SRCS 
+    ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
+    ${IMGUI_ROOT}/imgui_tables.cpp
+    ${IMGUI_ROOT}/imgui_widgets.cpp
+    ${IMGUI_ROOT}/imgui_draw.cpp
+    ${IMGUI_ROOT}/imgui_demo.cpp
+    ${IMGUI_ROOT}/imgui.cpp
+)
+target_sources(cuda_opengl_lib PRIVATE ${IMGUI_SRCS})
+
 # Set up external includes and linking
 set(EXTERNAL_LIB_DIRS
     C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0/lib/Release/x64
@@ -61,6 +75,7 @@ list(APPEND CMAKE_PREFIX_PATH ${EXTERNAL_LIB_DIRS})
 set(EXTERNAL_LIB_INCLUDES
     C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0/include
     C:/Users/lucciano/Workspace/Libs/bin/eigen
+    ${IMGUI_ROOT}
 )
 
 # OpenGL setup
@@ -88,6 +103,7 @@ add_executable(cuda_opengl_app)
 set_target_properties(cuda_opengl_app PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_sources(cuda_opengl_app PUBLIC ${CUDA_OPENGL_SOURCE_DIR}/main.cu)
 target_link_libraries(cuda_opengl_app cuda_opengl_lib)
+
 
 # Tests =======================================================================
 
