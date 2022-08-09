@@ -8,16 +8,16 @@
 #include <iostream>
 #include <string>
 
-void _check_gl_error(const char *file, int line);
+void _checkGLError(const char *file, int line);
  
 ///
 /// Usage
 /// [... some opengl calls]
 /// glCheckError();
 ///
-#define check_gl_error() _check_gl_error(__FILE__,__LINE__)
+#define checkGLError() _checkGLError(__FILE__,__LINE__)
  
-inline void _check_gl_error(const char *file, int line) {
+inline void _checkGLError(const char *file, int line) {
         GLenum err (glGetError());
  
         while(err!=GL_NO_ERROR) {

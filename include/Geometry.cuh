@@ -8,10 +8,12 @@
 #include "CuGlBuffer.cuh"
 
 void __global__ setBufferVals(float setNum,
-	float * d_bufferPtr, int bufferSize);
+							  float * d_bufferPtr,
+							  int bufferSize);
 
-void __global__ addToBufferVertex(float3 setNum,
-	float * d_bufferPtr, int bufferSize);
+void __global__ addToBufferVertex(ei::Vector3f setNum,
+								  float * d_bufferPtr,
+								  int bufferSize);
 
 struct Geometry
 {
@@ -41,7 +43,7 @@ struct Geometry
 
 void drawGeom(Geometry const & geom, Eigen::Matrix4f & cameraMat);
 
-void translateGeom(Geometry & geom, float3 setNum);
+void translateGeom(Geometry & geom, const ei::Vector3f& setNum);
 
 #endif /* GEOMETRY_CUH */
 

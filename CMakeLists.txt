@@ -1,5 +1,16 @@
 # Common ======================================================================
 cmake_minimum_required(VERSION 3.23)
+
+# Utility functions ===========================================================
+
+function(extract_macro_val MACRO_NAME HEADER_FILE)
+    string(REGEX MATCH "#define ${MACRO_NAME} [0-9]+" _macro_def "${HEADER_FILE}")
+    string(REGEX MATCH "[0-9]+" _macro_val "${_macro_def}")
+
+    set(extract_macro_val_RETURN ${_macro_val} PARENT_SCOPE)
+endfunction()
+
+
 #set(CUDA_HOST_COMPILER clang++)
 #set(CMAKE_CUDA_COMPILER "C:/Program Files/LLVM/bin/clang++.exe")
 set(CMAKE_CXX_STANDARD 17)
@@ -21,6 +32,7 @@ set(CUDA_OPENGL_HEADERS
     ${CUDA_OPENGL_HEADER_DIR}/Utils/General.h
     ${CUDA_OPENGL_HEADER_DIR}/Utils/Math.h
     ${CUDA_OPENGL_HEADER_DIR}/Utils/OpenGL.h
+    ${CUDA_OPENGL_HEADER_DIR}/Utils/Mesh.h
     ${CUDA_OPENGL_HEADER_DIR}/Camera.h
     ${CUDA_OPENGL_HEADER_DIR}/CuGlBuffer.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Geometry.cuh
@@ -31,6 +43,7 @@ set(CUDA_OPENGL_HEADERS
     ${CUDA_OPENGL_HEADER_DIR}/PlaneGLData.h
 )
 set(CUDA_OPENGL_SOURCES
+    ${CUDA_OPENGL_SOURCE_DIR}/Utils/Mesh.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/Utils/Eigen.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/Camera.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/CuGlBuffer.cu
@@ -51,9 +64,11 @@ target_compile_options(cuda_opengl_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
 target_include_directories(cuda_opengl_lib PUBLIC ${CUDA_OPENGL_HEADER_DIR})
 set_target_properties(cuda_opengl_lib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-# External libs
+# External libs header including and linking
 
-set(IMGUI_ROOT C:/Users/lucciano/Workspace/Libs/Bin/imgui/imgui-1.88)
+set(IMGUI_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/imgui/imgui-1.88")
+
+# ImGui Setup
 set(IMGUI_SRCS 
     ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
     ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
@@ -64,29 +79,24 @@ set(IMGUI_SRCS
     ${IMGUI_ROOT}/imgui.cpp
 )
 target_sources(cuda_opengl_lib PRIVATE ${IMGUI_SRCS})
-
-# Set up external includes and linking
-set(EXTERNAL_LIB_DIRS
-    C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0/lib/Release/x64
-    C:/Users/lucciano/Workspace/Libs/Bin/glfw-3.3.7.bin.WIN64/glfw-3.3.7.bin.WIN64
-)
-list(APPEND CMAKE_PREFIX_PATH ${EXTERNAL_LIB_DIRS})
-
-set(EXTERNAL_LIB_INCLUDES
-    C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0/include
-    C:/Users/lucciano/Workspace/Libs/bin/eigen
-    ${IMGUI_ROOT}
-)
+target_include_directories(cuda_opengl_lib PUBLIC ${IMGUI_ROOT})
 
 # OpenGL setup
 find_package(OpenGL REQUIRED)
 target_link_libraries(cuda_opengl_lib ${OPENGL_LIBRARY})
 
 # GLEW setup
+set(GLEW_ROOT "C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0")
+set(GLEW_INCLUDE_DIRS ${GLEW_ROOT}/include)
+set(GLEW_LIB_DIR ${GLEW_ROOT}/lib/Release/x64)
+list(APPEND CMAKE_PREFIX_PATH ${GLEW_LIB_DIR})
 find_library(GLEW_LIB "glew32")
-target_link_libraries(cuda_opengl_lib "${GLEW_LIB}")
+target_link_libraries(cuda_opengl_lib ${GLEW_LIB})
+target_include_directories(cuda_opengl_lib PUBLIC ${GLEW_INCLUDE_DIRS})
 
 # GLFW setup
+set(GLFW3_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/glfw-3.3.7.bin.WIN64/glfw-3.3.7.bin.WIN64")
+list(APPEND CMAKE_PREFIX_PATH ${GLFW3_ROOT})
 find_package(GLFW3 REQUIRED)
 target_link_libraries(cuda_opengl_lib ${GLFW3_LIBRARIES})
 target_include_directories(cuda_opengl_lib PUBLIC ${GLFW3_INCLUDE_DIRS})
@@ -95,7 +105,23 @@ target_include_directories(cuda_opengl_lib PUBLIC ${GLFW3_INCLUDE_DIRS})
 find_package(CUDA REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
 
-target_include_directories(cuda_opengl_lib PUBLIC ${EXTERNAL_LIB_INCLUDES})
+# Eigen setup
+set(EIGEN_ROOT "C:/Users/lucciano/Workspace/Libs/bin/eigen")
+set(EIGEN_INCLUDE_DIRS ${EIGEN_ROOT})
+target_include_directories(cuda_opengl_lib PUBLIC ${EIGEN_INCLUDE_DIRS})
+file(READ "${EIGEN_ROOT}/Eigen/src/Core/util/Macros.h" EIGEN_MACRO_HEADER)
+# check eigen version
+
+extract_macro_val("EIGEN_WORLD_VERSION" ${EIGEN_MACRO_HEADER})
+set(EIGEN_WORLD_VERSION ${extract_macro_val_RETURN})
+extract_macro_val("EIGEN_MAJOR_VERSION" ${EIGEN_MACRO_HEADER})
+set(EIGEN_MAJOR_VERSION ${extract_macro_val_RETURN})
+
+set(EXPECTED_EIGEN_VERSION "3.4")
+set(EIGEN_VERSION "${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}")
+if(NOT EXPECTED_EIGEN_VERSION EQUAL EIGEN_VERSION)
+    message(FATAL_ERROR "Incorrect Eigen version: '${EIGEN_VERSION}' expected: ${EXPECTED_EIGEN_VERSION}")
+endif()
 
 # Main App ====================================================================
 
@@ -118,17 +144,13 @@ set(TEST_SOURCES
 set(TEST_ALL_FILES ${TEST_SOURCES})
 add_executable(cuda_opengl_tests_main ${TEST_SOURCE_DIR}/main.cu ${TEST_SOURCES})
 
-target_compile_options(cuda_opengl_tests_main PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-    --expt-relaxed-constexpr
-    >)
-
 set_target_properties(cuda_opengl_tests_main PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # Link application library
 target_link_libraries(cuda_opengl_tests_main PRIVATE cuda_opengl_lib)
 
 # Include test includes
-set(EXTERNAL_TEST_INCLUDES C:/Users/lucciano/Workspace/Libs/Bin/glm/GLM-0.9.9.8)
+set(EXTERNAL_TEST_INCLUDES "C:/Users/lucciano/Workspace/Libs/Bin/glm/GLM-0.9.9.8")
 target_include_directories(cuda_opengl_tests_main PUBLIC ${EXTERNAL_TEST_INCLUDES})
 
 # Get and link gtest libs

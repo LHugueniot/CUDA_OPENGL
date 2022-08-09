@@ -9,7 +9,7 @@ void __global__ setBufferVals(float setNum,
 		d_bufferPtr[idx] = idx;
 }
 
-void __global__ addToBufferVertex(float3 setNum,
+void __global__ addToBufferVertex(ei::Vector3f setNum,
 	float * d_bufferPtr, int bufferSize)
 	{
 
@@ -19,11 +19,11 @@ void __global__ addToBufferVertex(float3 setNum,
     int idx_z = idx + 2;
 
 	if(idx_x < bufferSize)
-		d_bufferPtr[idx_x] += setNum.x;
+		d_bufferPtr[idx_x] += setNum.x();
 	if(idx_y < bufferSize)
-		d_bufferPtr[idx_y] += setNum.y;
+		d_bufferPtr[idx_y] += setNum.y();
 	if(idx_z < bufferSize)
-		d_bufferPtr[idx_z] += setNum.z;
+		d_bufferPtr[idx_z] += setNum.z();
 }
 
 void drawGeom(Geometry const & geom, Eigen::Matrix4f & cameraMat)
@@ -48,7 +48,7 @@ void drawGeom(Geometry const & geom, Eigen::Matrix4f & cameraMat)
     glDisableVertexAttribArray(0);
 }
 
-void translateGeom(Geometry & geom, float3 setNum)
+void translateGeom(Geometry & geom, const ei::Vector3f& setNum)
 {
 
 	auto & d_pBuffer = geom.buffer.d_pBuffer;
@@ -63,9 +63,9 @@ void translateGeom(Geometry & geom, float3 setNum)
 
 	// Get pointer to use, not sure if possible to use outside of mapped scope
 	cutilSafeCall(
-	cudaGraphicsResourceGetMappedPointer((void**)&d_pBuffer,
-                                         &bufferSizeBytes,
-                                         cugl_pVBO)
+	    cudaGraphicsResourceGetMappedPointer((void**)&d_pBuffer,
+                                             &bufferSizeBytes,
+                                             cugl_pVBO)
 	);
 
     addToBufferVertex<<<1, static_cast<int>((float)bufferSize/3.f)>>>

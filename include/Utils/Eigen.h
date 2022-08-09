@@ -5,6 +5,12 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+namespace Eigen
+{
+typedef Matrix<unsigned int,2,1> Vector2ui;
+typedef Matrix<unsigned int,3,1> Vector3ui;
+}
+
 namespace ei = Eigen;
 
 namespace ei_utils{

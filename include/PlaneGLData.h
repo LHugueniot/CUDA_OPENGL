@@ -31,11 +31,6 @@ struct PlaneGLData{
     ei::Vector3f baseColour;
 };
 
-void generatePlaneVertexData(std::vector<float> & gridVertices, 
-	float squareSize, uint x_gridSize, uint z_gridSize);
-void generateTile(std::vector<float> & gridVertices);
-void generateLine(std::vector<float> & gridVertices);
-
 void initPlaneVAO(PlaneGLData & glData);
 void updatePlaneVBO(PlaneGLData const & glData);
 void drawPlane(PlaneGLData const & glData, Eigen::Matrix4f & cameraMat);

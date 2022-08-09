@@ -1,5 +1,6 @@
 
 #include "Utils/ImGUI.h"
+#include "Utils/Mesh.h"
 
 #include "Camera.h"
 #include "GLFWState.h"
@@ -102,7 +103,7 @@ int main(int argv, char** args)
 
     bool showDemoWindow = true;
 
-    //=====================================CUDA SETUP===========================================
+    //=====================================CUDA SETUP==============================================
     // Initialize CUDA context (on top of the GL context)
 
     fprintf(stdout, "CUDA SETUP\n");
@@ -110,7 +111,7 @@ int main(int argv, char** args)
     //cudaSetDevice(0);
     //cudaGLSetGLDevice(0);
 
-    //=====================================OPENGL SETUP=========================================
+    //=====================================OPENGL SETUP============================================
     
     fprintf(stdout, "OPENGL SETUP\n");
 
@@ -126,7 +127,7 @@ int main(int argv, char** args)
 
     //glfwSwapBuffers(mainWindow->m_glfwWindow);
 
-    //=====================================CAMERA SETUP=========================================
+    //=====================================CAMERA SETUP============================================
 
     fprintf(stdout, "CAMERA SETUP\n");
 
@@ -156,7 +157,7 @@ int main(int argv, char** args)
         {GLFW_KEY_DOWN, Camera::MOVE_X_M}
     };
 
-    //=====================================SHADER SETUP=========================================
+    //=====================================SHADER SETUP============================================
 
     fprintf(stdout, "SHADER SETUP\n");
     
@@ -167,29 +168,47 @@ int main(int argv, char** args)
         return EXIT_FAILURE;
     }
 
-    check_gl_error();
-    //=====================================MESH DATA SETUP====================================
+    checkGLError();
+
+    //=====================================MESH DATA SETUP=========================================
 
     fprintf(stdout, "MESH SETUP\n");
     
     //Create center of world grid plain
     std::vector<float> gridPlaneVertexData;
-    //generateTile(gridPlaneVertexData);
-    //generateLine(gridPlaneVertexData);
-    generatePlaneVertexData(gridPlaneVertexData, 1, 6, 6);
+
+    //generateSquare(gridPlaneVertexData,
+    //                    ei::Vector3f(0.f, 0.f, 0.f),
+    //                    1.f,
+    //                    {Dim::X, Dim::Z});
+    //generateSquarePlane(gridPlaneVertexData,
+    //                    ei::Vector3f(0.f, 0.f, 0.f),
+    //                    1.f,
+    //                    {Dim::X, Dim::Z},
+    //                    ei::Vector2ui(10, 10));
+    ei::Vector3f cubeGridOrigin = {0.f, 0.f, 0.f};
+    generateCubeGrid(gridPlaneVertexData,
+                     cubeGridOrigin,
+                     1.f,
+                     ei::Vector3ui(10, 10, 10));
+    float cubeGridTranslate[4] = {
+        cubeGridOrigin[0],
+        cubeGridOrigin[1],
+        cubeGridOrigin[2],
+        0,
+    };
+
     PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
+
     initPlaneVAO(gridPlane);
+
     Geometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
-    /*
-    */
-    glfwMakeContextCurrent(mainWindow->m_glfwWindow);
-    //glViewport(0, 0, mainWindow->m_windowWidth, mainWindow->m_windowHeight);
+
+
+    //=====================================MAIN LOOP===============================================
 
     while(!shouldQuit(glfwState))
     {
-        //fprintf(stdout, "Drawing for window: %s\n", mainWindow->m_windowTitle.c_str());
-
-
         for (auto window : glfwState.m_windows)
         {
             glfwMakeContextCurrent(window->m_glfwWindow);
@@ -213,25 +232,49 @@ int main(int argv, char** args)
                     moveCamera(camera, action);
                 }
             }
+
             if (window->m_yScroll > 0)
             {
                 moveCamera(camera, Camera::ZOOM_IN);
                 window->m_yScroll = 0;
-                std::cout<<"ZOOM_IN"<<std::endl;
             }
             else if(window->m_yScroll < 0)
             {
                 moveCamera(camera, Camera::ZOOM_OUT);
-                std::cout<<"ZOOM_OUT"<<std::endl;
                 window->m_yScroll = 0;
             }
+
+            /*
+            //translateGeom();
+            */
 
             // Start ImGui frame
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
+            bool showDemoWindow = true;
+            {
+                ImGui::ShowDemoWindow(&showDemoWindow);
+            }
+
+
             ImGuiHelloWorld(showDemoWindow, clearColor);
+
+            {
+                
+                bool show_another_window = true;
+                ImGui::Begin("Grid Translation", &show_another_window);
+                ImGui::InputFloat3("input float3", cubeGridTranslate);
+                ImGui::SameLine();
+                if (ImGui::Button("Translate"))
+                    translateGeom(gridPlaneCu, {
+                        cubeGridTranslate[0],
+                        cubeGridTranslate[1],
+                        cubeGridTranslate[2]
+                    });
+                ImGui::End();
+            }
 
             ImGui::Render();
 
@@ -242,11 +285,11 @@ int main(int argv, char** args)
             //ei::Matrix4f cameraVP = camera.projMat.transpose() * camera.viewMat.transpose();
             ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
             //cameraVP.transpose();
-            std::cout<<cameraVP<<std::endl;
+            //std::cout<<cameraVP<<std::endl;
             //updatePlaneVAO(gridPlane);
             //drawPlane(gridPlane, cameraVP);
             drawGeom(gridPlaneCu, cameraVP);
-            check_gl_error();
+            checkGLError();
 
             // Overlay imgui stuff
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
