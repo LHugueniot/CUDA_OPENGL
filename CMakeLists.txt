@@ -26,6 +26,7 @@ project(${PROJECTNAME} LANGUAGES CUDA CXX)
 set(CUDA_OPENGL_HEADER_DIR "include")
 set(CUDA_OPENGL_SOURCE_DIR "src")
 set(CUDA_OPENGL_HEADERS
+    ${CUDA_OPENGL_HEADER_DIR}/PositionBasedDynamics/PBDSolver.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Utils/Cuda.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Utils/CudaGL.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Utils/Eigen.h
@@ -35,6 +36,7 @@ set(CUDA_OPENGL_HEADERS
     ${CUDA_OPENGL_HEADER_DIR}/Utils/Mesh.h
     ${CUDA_OPENGL_HEADER_DIR}/Camera.h
     ${CUDA_OPENGL_HEADER_DIR}/CuGlBuffer.cuh
+    ${CUDA_OPENGL_HEADER_DIR}/CuGlGeometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Geometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/GLFWState.h
     ${CUDA_OPENGL_HEADER_DIR}/GLShader.h
@@ -43,13 +45,16 @@ set(CUDA_OPENGL_HEADERS
     ${CUDA_OPENGL_HEADER_DIR}/PlaneGLData.h
 )
 set(CUDA_OPENGL_SOURCES
+    ${CUDA_OPENGL_SOURCE_DIR}/PositionBasedDynamics/PBDSolver.cu
     ${CUDA_OPENGL_SOURCE_DIR}/Utils/Mesh.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/Utils/Eigen.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/Camera.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/CuGlBuffer.cu
+    ${CUDA_OPENGL_SOURCE_DIR}/CuGlGeometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/Geometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/GLFWState.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/GLShader.cpp
+    ${CUDA_OPENGL_SOURCE_DIR}/LoadGeometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/MonoColourGLShader.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/PlaneGLData.cpp
 )
@@ -110,8 +115,8 @@ set(EIGEN_ROOT "C:/Users/lucciano/Workspace/Libs/bin/eigen")
 set(EIGEN_INCLUDE_DIRS ${EIGEN_ROOT})
 target_include_directories(cuda_opengl_lib PUBLIC ${EIGEN_INCLUDE_DIRS})
 file(READ "${EIGEN_ROOT}/Eigen/src/Core/util/Macros.h" EIGEN_MACRO_HEADER)
-# check eigen version
 
+# check eigen version
 extract_macro_val("EIGEN_WORLD_VERSION" ${EIGEN_MACRO_HEADER})
 set(EIGEN_WORLD_VERSION ${extract_macro_val_RETURN})
 extract_macro_val("EIGEN_MAJOR_VERSION" ${EIGEN_MACRO_HEADER})
@@ -123,12 +128,26 @@ if(NOT EXPECTED_EIGEN_VERSION EQUAL EIGEN_VERSION)
     message(FATAL_ERROR "Incorrect Eigen version: '${EIGEN_VERSION}' expected: ${EXPECTED_EIGEN_VERSION}")
 endif()
 
+set(ASSIMP_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/assimp/assimp_v5.2.5")
+set(ASSIMP_INCLUDE_DIRS ${ASSIMP_ROOT}/include)
+set(ASSIMP_LIB_DIR ${ASSIMP_ROOT}/lib/Release)
+list(APPEND CMAKE_PREFIX_PATH ${ASSIMP_LIB_DIR})
+find_library(ASSIMP_LIB "assimp-vc143-mt")
+message(STATUS ${ASSIMP_LIB})
+target_link_libraries(cuda_opengl_lib ${ASSIMP_LIB})
+target_include_directories(cuda_opengl_lib PUBLIC ${ASSIMP_INCLUDE_DIRS})
+
+
 # Main App ====================================================================
 
 add_executable(cuda_opengl_app)
 set_target_properties(cuda_opengl_app PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_sources(cuda_opengl_app PUBLIC ${CUDA_OPENGL_SOURCE_DIR}/main.cu)
 target_link_libraries(cuda_opengl_app cuda_opengl_lib)
+
+target_compile_options(cuda_opengl_app PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    --expt-relaxed-constexpr
+    >)
 
 
 # Tests =======================================================================
@@ -143,6 +162,11 @@ set(TEST_SOURCES
 )
 set(TEST_ALL_FILES ${TEST_SOURCES})
 add_executable(cuda_opengl_tests_main ${TEST_SOURCE_DIR}/main.cu ${TEST_SOURCES})
+
+
+target_compile_options(cuda_opengl_tests_main PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    --expt-relaxed-constexpr
+    >)
 
 set_target_properties(cuda_opengl_tests_main PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 

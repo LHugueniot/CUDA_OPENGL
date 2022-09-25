@@ -1,76 +1,126 @@
 #include "Geometry.cuh"
 
-void __global__ setBufferVals(float setNum,
-	float * d_bufferPtr, int bufferSize)
-	{
+// ================================================================================================
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if(idx < bufferSize)
-		d_bufferPtr[idx] = idx;
-}
-
-void __global__ addToBufferVertex(ei::Vector3f setNum,
-	float * d_bufferPtr, int bufferSize)
-	{
-
-    int idx = (blockIdx.x * blockDim.x + threadIdx.x) * 3;
-    int idx_x = idx;
-    int idx_y = idx + 1;
-    int idx_z = idx + 2;
-
-	if(idx_x < bufferSize)
-		d_bufferPtr[idx_x] += setNum.x();
-	if(idx_y < bufferSize)
-		d_bufferPtr[idx_y] += setNum.y();
-	if(idx_z < bufferSize)
-		d_bufferPtr[idx_z] += setNum.z();
-}
-
-void drawGeom(Geometry const & geom, Eigen::Matrix4f & cameraMat)
+void __global__
+scaleVertices(const ei::Vector3f scale,
+              const ei::Vector3f pivot,
+	          float * vertexBufferData,
+              uint vertexBufferSize)
 {
+    uint idx = (blockIdx.x * blockDim.x + threadIdx.x) * 3;
+    uint endIdx = idx + 2;
 
-	//std::cout<<"DEBUG 1"<<std::endl;
-	glUseProgram(*geom.monoColourShader);
-    //std::cout<<"DEBUG 1.25"<<std::endl;
-    GLuint mvpID = glGetUniformLocation(*geom.monoColourShader, "MVP");
-    //std::cout<<"DEBUG 1.5"<<std::endl;
-    glUniformMatrix4fv(mvpID, 1, GL_FALSE, cameraMat.data());
+    if (!(endIdx < vertexBufferSize))
+        return;
 
-//std::cout<<"DEBUG 2"<<std::endl;
-    GLuint baseColID = glGetUniformLocation(*geom.monoColourShader, "base_colour");
-    glUniform3fv(baseColID, 1, geom.baseColour.data());
-
-//std::cout<<"DEBUG 3"<<std::endl;
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, geom.buffer.gl_VBO);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glDrawArrays(GL_LINES, 0, geom.buffer.d_bufferSize/3);
-    glDisableVertexAttribArray(0);
+    Eigen::Map<ei::Vector3f> vertex(&vertexBufferData[idx]);
+    ei::Vector3f diff = (vertex - pivot);
+    diff = {
+        diff.x() * scale.x(),
+        diff.y() * scale.y(),
+        diff.z() * scale.z()
+    };
+    vertex = diff + pivot;
 }
 
-void translateGeom(Geometry & geom, const ei::Vector3f& setNum)
+void scaleGeom(Geometry& geom,
+               const ei::Vector3f& scale,
+               const ei::Vector3f& pivot)
 {
-
-	auto & d_pBuffer = geom.buffer.d_pBuffer;
-	auto & cugl_pVBO = geom.buffer.cugl_pVBO;
-	size_t bufferSize = geom.buffer.d_bufferSize;
-	size_t bufferSizeBytes;
-
-    // Map buffer object
-    cutilSafeCall(
-	cudaGraphicsMapResources(1, &cugl_pVBO)
-	);
-
-	// Get pointer to use, not sure if possible to use outside of mapped scope
-	cutilSafeCall(
-	    cudaGraphicsResourceGetMappedPointer((void**)&d_pBuffer,
-                                             &bufferSizeBytes,
-                                             cugl_pVBO)
-	);
-
-    addToBufferVertex<<<1, static_cast<int>((float)bufferSize/3.f)>>>
-        (setNum, d_pBuffer, bufferSize);
-
-    // Unmap buffer object
-    cutilSafeCall(cudaGraphicsUnmapResources(1, &cugl_pVBO));
+    assert(geom.d_vertexPositionBufferSize % 3 == 0);
+    scaleVertices<<<1, static_cast<int>((float)geom.d_vertexPositionBufferSize/3.f)>>>
+        (scale, pivot, geom.d_vertexPositionBufferData, geom.d_vertexPositionBufferSize);
 }
+
+// ================================================================================================
+
+void __global__
+rotateVertices(const ei::Matrix3f rotation,
+               const ei::Vector3f pivot,
+	           float * vertexBufferData,
+               uint vertexBufferSize)
+{
+    uint idx = (blockIdx.x * blockDim.x + threadIdx.x) * 3;
+    uint endIdx = idx + 2;
+
+    if (!(endIdx < vertexBufferSize))
+        return;
+
+    ei::Map<ei::Vector3f> vertex(&vertexBufferData[idx]);
+
+    vertex -= pivot;
+    vertex = vertex.transpose() * rotation;
+    vertex += pivot;
+}
+
+void rotateGeom(Geometry& geom,
+                const ei::Vector3f& axis,
+                const float angle,
+                const ei::Vector3f& pivot)
+{
+    assert(geom.d_vertexPositionBufferSize % 3 == 0);
+    ei::Transform3f transform(ei::AngleAxis<float>(angle, axis.normalized()));
+
+    rotateVertices<<<1, static_cast<int>((float)geom.d_vertexPositionBufferSize/3.f)>>>
+        (transform.rotation(), pivot, geom.d_vertexPositionBufferData, geom.d_vertexPositionBufferSize);
+}
+
+// ================================================================================================
+
+void __global__
+translateVertices(const ei::Vector3f translation,
+	              float * vertexBufferData,
+                  uint vertexBufferSize)
+{
+    uint idx = (blockIdx.x * blockDim.x + threadIdx.x) * 3;
+    uint endIdx = idx + 2;
+
+    if (!(endIdx < vertexBufferSize))
+        return;
+
+    Eigen::Map<ei::Vector3f> vertex(&vertexBufferData[idx]);
+    vertex += translation;
+}
+
+void translateGeom(Geometry& geom,
+                   const ei::Vector3f& translation)
+{
+    assert(geom.d_vertexPositionBufferSize % 3 == 0);
+    translateVertices<<<1, static_cast<int>((float)geom.d_vertexPositionBufferSize/3.f)>>>
+        (translation, geom.d_vertexPositionBufferData, geom.d_vertexPositionBufferSize);
+}
+
+// ================================================================================================
+
+void __global__
+transformVertices(const ei::Vector3f translation,
+                  const ei::Matrix3f rotation,
+                  const ei::Matrix3f scaling,
+	              float * vertexBufferData,
+                  uint vertexBufferSize)
+{
+    uint idx = (blockIdx.x * blockDim.x + threadIdx.x) * 3;
+    uint endIdx = idx + 2;
+
+    if (!(endIdx < vertexBufferSize))
+        return;
+
+    ei::Map<ei::Vector3f> vertex(&vertexBufferData[idx]);
+
+    vertex = (vertex + translation).transpose() * rotation * scaling;
+}
+
+void transformGeom(Geometry& geom,
+                   const ei::Transform3f& transform)
+{
+    assert(geom.d_vertexPositionBufferSize % 3 == 0);
+    transformVertices<<<1, static_cast<int>((float)geom.d_vertexPositionBufferSize/3.f)>>>(
+        transform.translation(),
+        transform.rotation(),
+        transform.linear(),
+        geom.d_vertexPositionBufferData,
+        geom.d_vertexPositionBufferSize);
+}
+
+// ================================================================================================

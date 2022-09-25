@@ -7,8 +7,9 @@
 #include "MacGrid.cuh"
 #include "PlaneGLData.h"
 #include "MonoColourGLShader.h"
-#include "Geometry.cuh"
+#include "CuGlGeometry.cuh"
 #include "CuGlBuffer.cuh"
+#include "PositionBasedDynamics/PBDSolver.cuh"
 
 //struct CUDA_GL_state{
 //    int deviceCount;
@@ -176,22 +177,23 @@ int main(int argv, char** args)
     
     //Create center of world grid plain
     std::vector<float> gridPlaneVertexData;
+    ei::Vector3f cubeGridOrigin = {0.f, 0.f, 0.f};
 
     //generateSquare(gridPlaneVertexData,
     //                    ei::Vector3f(0.f, 0.f, 0.f),
     //                    1.f,
     //                    {Dim::X, Dim::Z});
-    //generateSquarePlane(gridPlaneVertexData,
-    //                    ei::Vector3f(0.f, 0.f, 0.f),
-    //                    1.f,
-    //                    {Dim::X, Dim::Z},
-    //                    ei::Vector2ui(10, 10));
-    ei::Vector3f cubeGridOrigin = {0.f, 0.f, 0.f};
-    generateCubeGrid(gridPlaneVertexData,
-                     cubeGridOrigin,
-                     1.f,
-                     ei::Vector3ui(10, 10, 10));
-    float cubeGridTranslate[4] = {
+    generateSquarePlane(gridPlaneVertexData,
+                        ei::Vector3f(0.f, 0.f, 0.f),
+                        1.f,
+                        {Dim::X, Dim::Z},
+                        ei::Vector2ui(10, 10));
+    //generateCubeGrid(gridPlaneVertexData,
+    //                 cubeGridOrigin,
+    //                 1.f,
+    //                 ei::Vector3ui(10, 10, 10));
+    float cubeGridTranslate[4] =
+    {
         cubeGridOrigin[0],
         cubeGridOrigin[1],
         cubeGridOrigin[2],
@@ -202,8 +204,7 @@ int main(int argv, char** args)
 
     initPlaneVAO(gridPlane);
 
-    Geometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
-
+    CuGlGeometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
 
     //=====================================MAIN LOOP===============================================
 

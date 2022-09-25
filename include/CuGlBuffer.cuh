@@ -49,6 +49,7 @@ bool set_cugl_buffer(cugl_buffer<T> * buffer_obj,
 
 	oss<<"h_bufferSize: "<<h_bufferSize<<" buffer_obj->d_bufferSize:"
 			<<buffer_obj->d_bufferSize<<std::endl;
+
 	ASSERT_WITH_MESSAGE(h_bufferSize == buffer_obj->d_bufferSize, oss.str());
 
 	auto & d_pBuffer = buffer_obj->d_pBuffer;

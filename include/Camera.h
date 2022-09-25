@@ -31,7 +31,7 @@ struct Camera
 		float _near = 1.f,
 		float _rotationSpeed = 0.05f,
 		float _zoomSpeed = 0.05f,
-		float _xFormSpeed = 1.0f);
+		float _xFormSpeed = 0.01f);
 
 	ei::Matrix4f viewMat;
 

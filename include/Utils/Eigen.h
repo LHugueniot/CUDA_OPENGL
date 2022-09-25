@@ -7,8 +7,11 @@
 
 namespace Eigen
 {
-typedef Matrix<unsigned int,2,1> Vector2ui;
-typedef Matrix<unsigned int,3,1> Vector3ui;
+using Vector2ui = Matrix<unsigned int,2,1>;
+using Vector3ui = Matrix<unsigned int,3,1>;
+//using Scale3f = DiagonalMatrix<Scalar,3>;
+using Transform3f = Transform<float, 3, Affine>;
+using Translation3f = Translation<float,3>;
 }
 
 namespace ei = Eigen;
