@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string>
+#include <map>
 
 void _checkGLError(const char *file, int line);
  
@@ -17,23 +18,36 @@ void _checkGLError(const char *file, int line);
 ///
 #define checkGLError() _checkGLError(__FILE__,__LINE__)
  
-inline void _checkGLError(const char *file, int line) {
-        GLenum err (glGetError());
+inline void _checkGLError(const char *file, int line)
+{
+    GLenum err (glGetError());
  
-        while(err!=GL_NO_ERROR) {
-                std::string error;
- 
-                switch(err) {
-                        case GL_INVALID_OPERATION:      error="INVALID_OPERATION";      break;
-                        case GL_INVALID_ENUM:           error="INVALID_ENUM";           break;
-                        case GL_INVALID_VALUE:          error="INVALID_VALUE";          break;
-                        case GL_OUT_OF_MEMORY:          error="OUT_OF_MEMORY";          break;
-                        case GL_INVALID_FRAMEBUFFER_OPERATION:  error="INVALID_FRAMEBUFFER_OPERATION";  break;
-                }
- 
-                std::cerr << "GL_" << error.c_str() <<" - "<<file<<":"<<line<<std::endl;
-                err=glGetError();
+    while(err!=GL_NO_ERROR) 
+    {
+        std::string error;
+
+        switch(err) {
+            case GL_INVALID_OPERATION:  error="INVALID_OPERATION";  break;
+            case GL_INVALID_ENUM:   error="INVALID_ENUM";   break;
+            case GL_INVALID_VALUE:  error="INVALID_VALUE";  break;
+            case GL_OUT_OF_MEMORY:  error="OUT_OF_MEMORY";  break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION:  error="INVALID_FRAMEBUFFER_OPERATION";  break;
         }
+
+        std::cerr << "GL_" << error.c_str() <<" - "<<file<<":"<<line<<std::endl;
+
+        err=glGetError();
+    }
 }
+
+void GLAPIENTRY
+GLDebugMessageCallback(GLenum source,
+                       GLenum type,
+                       GLuint id,
+                       GLenum severity,
+                       GLsizei length,
+                       const GLchar* message,
+                       const void* userParam);
+
 
 #endif /* UTIL_OPENGL_H */

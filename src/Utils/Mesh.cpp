@@ -3,7 +3,8 @@
 void generateLine(std::vector<float> & vertices,
                   const ei::Vector3f& origin,
                   const float& length,
-                  const Dim& direction){
+                  const Dim& direction)
+{
     const uint stride = 3;
     const uint nVertices = 2;
 
@@ -15,7 +16,8 @@ void generateLine(std::vector<float> & vertices,
 void generateSquare(std::vector<float> & vertices,
                     const ei::Vector3f& origin,
                     const float& squareSize,
-                    const std::array<Dim, 2>& dims){
+                    const std::array<Dim, 2>& dims)
+{
     const uint stride = 3;
     const uint nVertices = 8;
     vertices.resize(stride * nVertices);

@@ -37,8 +37,11 @@ set(CUDA_OPENGL_HEADERS
     ${CUDA_OPENGL_HEADER_DIR}/Camera.h
     ${CUDA_OPENGL_HEADER_DIR}/CuGlBuffer.cuh
     ${CUDA_OPENGL_HEADER_DIR}/CuGlGeometry.cuh
+    ${CUDA_OPENGL_HEADER_DIR}/GeometryViewer.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Geometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/GLFWState.h
+    ${CUDA_OPENGL_HEADER_DIR}/GlGeometry.cuh
+    ${CUDA_OPENGL_HEADER_DIR}/LoadGeometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/GLShader.h
     ${CUDA_OPENGL_HEADER_DIR}/MacGrid.cuh
     ${CUDA_OPENGL_HEADER_DIR}/MonoColourGLShader.h
@@ -48,11 +51,15 @@ set(CUDA_OPENGL_SOURCES
     ${CUDA_OPENGL_SOURCE_DIR}/PositionBasedDynamics/PBDSolver.cu
     ${CUDA_OPENGL_SOURCE_DIR}/Utils/Mesh.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/Utils/Eigen.cpp
+    ${CUDA_OPENGL_SOURCE_DIR}/Utils/OpenGL.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/Camera.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/CuGlBuffer.cu
     ${CUDA_OPENGL_SOURCE_DIR}/CuGlGeometry.cu
+    ${CUDA_OPENGL_SOURCE_DIR}/GeometryViewer.cu
     ${CUDA_OPENGL_SOURCE_DIR}/Geometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/GLFWState.cpp
+    ${CUDA_OPENGL_SOURCE_DIR}/GlGeometry.cu
+    ${CUDA_OPENGL_SOURCE_DIR}/GlGeometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/GLShader.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/LoadGeometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/MonoColourGLShader.cpp

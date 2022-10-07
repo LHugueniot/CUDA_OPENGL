@@ -10,7 +10,7 @@ Camera::Camera(
     ei::Vector3f const & _target, 
     float _fov, float _far, float _near,
     float _rotationSpeed, float _zoomSpeed,
-	float _xFormSpeed
+    float _xFormSpeed
     ) :
         windowWidth(_windowWidth),
         windowHeight(_windowHeight),

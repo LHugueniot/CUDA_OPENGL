@@ -1,2 +1,5 @@
-build/
+b_debug/
+b_release/
 .vscode/
+.vs/
+out/
