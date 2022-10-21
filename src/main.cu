@@ -8,7 +8,6 @@
 #include "GLFWState.h"
 #include "Geometry.cuh"
 #include "GeometryViewer.cuh"
-#include "GlGeometry.cuh"
 #include "LoadGeometry.cuh"
 #include "MacGrid.cuh"
 #include "MonoColourGLShader.h"
@@ -68,8 +67,7 @@ int main(int argv, char **args)
 
     fprintf(stdout, "Start of main.\n");
 
-    //=====================================GLEW/GLFW
-    // SETUP=======================================
+    //=====================================GLEW/GLFW SETUP=======================================
 
     int glMajorVersion = 4;
     int glMinorVersion = 6;
@@ -95,8 +93,7 @@ int main(int argv, char **args)
         return EXIT_FAILURE;
     }
 
-    //=====================================IMGUI
-    // SETUP==========================================
+    //=====================================IMGUI SETUP==========================================
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -117,8 +114,7 @@ int main(int argv, char **args)
 
     bool showDemoWindow = true;
 
-    //=====================================CUDA
-    // SETUP==============================================
+    //=====================================CUDA SETUP==============================================
     // Initialize CUDA context (on top of the GL context)
 
     fprintf(stdout, "CUDA SETUP\n");
@@ -126,8 +122,7 @@ int main(int argv, char **args)
     // cudaSetDevice(0);
     // cudaGLSetGLDevice(0);
 
-    //=====================================OPENGL
-    // SETUP============================================
+    //=====================================OPENGL SETUP============================================
 
     fprintf(stdout, "OPENGL SETUP\n");
 
@@ -141,12 +136,13 @@ int main(int argv, char **args)
 
     // glfwSwapBuffers(mainWindow->m_glfwWindow);
 
+#ifndef NDEBUG
     // During init, enable debug output
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(GLDebugMessageCallback, 0);
+#endif
 
-    //=====================================CAMERA
-    // SETUP============================================
+    //=====================================CAMERA SETUP============================================
 
     fprintf(stdout, "CAMERA SETUP\n");
 
@@ -172,8 +168,7 @@ int main(int argv, char **args)
         {GLFW_KEY_RIGHT, Camera::MOVE_Z_P},
         {GLFW_KEY_DOWN, Camera::MOVE_X_M}};
 
-    //=====================================SHADER
-    // SETUP============================================
+    //=====================================SHADER SETUP============================================
 
     fprintf(stdout, "SHADER SETUP\n");
 
@@ -186,8 +181,7 @@ int main(int argv, char **args)
 
     checkGLError();
 
-    //=====================================SCENE DATA
-    // LOAD=========================================
+    //=====================================SCENE DATA LOAD=========================================
 
     const aiScene *sceneCache = nullptr;
 
@@ -201,8 +195,7 @@ int main(int argv, char **args)
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
 
-    //=====================================MESH DATA
-    // SETUP=========================================
+    //=====================================MESH DATA SETUP=========================================
 
     fprintf(stdout, "MESH SETUP\n");
 
@@ -228,8 +221,9 @@ int main(int argv, char **args)
     };
 
     // PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
-
     // initPlaneVAO(gridPlane);
+
+    assert(gridPlaneVertexData.size() > 0);
 
     CuGlGeometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
 
@@ -241,7 +235,7 @@ int main(int argv, char **args)
 
     Geometry &cudaPanther = *(nameToGeometry[0].second);
 
-    GeometryViewer patherViewer;
+    GeometryViewer patherViewer{};
 
     initGeometryViewer(patherViewer, vertexBufferSetter.m_glBufferId,
                        vertexBufferSetter.m_nElements,
@@ -255,12 +249,23 @@ int main(int argv, char **args)
                              vertexBufferSetter.m_data.size() * sizeof(float),
                              cudaMemcpyDeviceToHost));
 
+    std::vector<uint> retrievedIndexData;
+    retrievedIndexData.resize(indexBufferSetter.m_data.size());
+    cutilSafeCall(cudaMemcpy(&retrievedIndexData.data()[0],
+                             cudaPanther.d_triangleIdxBufferData,
+                             indexBufferSetter.m_data.size() * sizeof(uint),
+                             cudaMemcpyDeviceToHost));
+
     assert(retrievedVertexData == vertexBufferSetter.m_data);
-    //=====================================MAIN
-    // LOOP===============================================
+    assert(retrievedIndexData == indexBufferSetter.m_data);
+    checkGLError();
+
+    //=====================================MAIN LOOP===============================================
+    int frame = 0;
 
     while (!shouldQuit(glfwState))
     {
+        frame++;
         for (auto window : glfwState.m_windows)
         {
             glfwMakeContextCurrent(window->m_glfwWindow);
@@ -305,7 +310,7 @@ int main(int argv, char **args)
 
             bool showDemoWindow = true;
             {
-                ImGui::ShowDemoWindow(&showDemoWindow);
+                // ImGui::ShowDemoWindow(&showDemoWindow);
             }
 
             ImGuiHelloWorld(showDemoWindow, clearColor);
@@ -325,16 +330,15 @@ int main(int argv, char **args)
 
             ImGui::Render();
 
-            // Draw geometry
-            // updatePlaneVBO(gridPlane);
-
             updateCamera(camera);
             // ei::Matrix4f cameraVP = camera.projMat.transpose() *
             // camera.viewMat.transpose();
             ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
             // cameraVP.transpose();
             // std::cout<<cameraVP<<std::endl;
-            // updatePlaneVAO(gridPlane);
+
+            // Draw geometry
+            // updatePlaneVBO(gridPlane);
             // drawPlane(gridPlane, cameraVP);
 
             /*
@@ -364,14 +368,15 @@ int main(int argv, char **args)
             //    m_resourceObj));
             //
             // cudaPanther.
-            drawGeometryViewer(patherViewer, cameraVP);
+
+            // drawGeometryViewer(patherViewer, cameraVP);
             checkGLError();
 
             // drawGeom(gridPlaneCu, cameraVP);
             // checkGLError();
 
             // Overlay imgui stuff
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
             glfwSwapBuffers(window->m_glfwWindow);
         }

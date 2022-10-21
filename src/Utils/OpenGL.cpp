@@ -1,4 +1,5 @@
 #include <Utils/OpenGL.h>
+#include <sstream>
 
 static const std::map<GLenum, std::string> kGLDebugEnumToString {
     {GL_DEBUG_TYPE_ERROR, "GL_DEBUG_TYPE_ERROR"},
@@ -21,8 +22,19 @@ GLDebugMessageCallback(GLenum source,
                        const GLchar* message,
                        const void* userParam)
 {
-    std::cerr<<"GL CALLBACK: "<<(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR ** " : " ")
+    std::stringstream errStream;
+
+    errStream<<"GL CALLBACK: "<<(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR ** " : " ")
              <<kGLDebugEnumToString.at(type)<<" "
              <<severity<<" "
              <<message<<std::endl;
+
+    if (type == GL_DEBUG_TYPE_ERROR)
+    {
+        throw std::exception(errStream.str().c_str());
+    }
+    else
+    { 
+        std::cout<<errStream.str()<<std::endl;
+    }
 }

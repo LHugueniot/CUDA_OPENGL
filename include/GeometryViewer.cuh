@@ -9,15 +9,15 @@
 
 struct GeometryViewer
 {
-    GLuint m_vao;
+    GLuint m_vao = 0;
 
-    uint m_nVertices;
-    GLuint m_vbo;
+    uint m_nVertices = 0;
+    GLuint m_vbo = 0;
 
-    uint m_nIndices;
-    GLuint m_ibo;
+    uint m_nIndices = 0;
+    GLuint m_ibo = 0;
 
-    GLuint *m_monoColourShader;
+    GLuint *m_monoColourShader = nullptr;
 
     ei::Vector3f m_baseColour = {1, 0, 0};
 };

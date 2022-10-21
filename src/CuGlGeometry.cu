@@ -39,6 +39,7 @@ void drawGeom(CuGlGeometry const &geom, Eigen::Matrix4f &cameraMat)
         glGetUniformLocation(*geom.monoColourShader, "base_colour");
     glUniform3fv(baseColID, 1, geom.baseColour.data());
 
+    glBindVertexArray(geom.m_vao);
     // std::cout<<"DEBUG 3"<<std::endl;
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, geom.buffer.gl_VBO);

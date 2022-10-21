@@ -4,6 +4,8 @@ void initGeometryViewer(GeometryViewer &geom, uint nVertices, GLuint vbo,
                         uint nIndices, GLuint ibo, GLuint *monoColorShader,
                         const ei::Vector3f &baseColour)
 {
+    assert(vbo > 0);
+    assert(ibo > 0);
     geom.m_nVertices = nVertices;
     geom.m_vbo = vbo;
     geom.m_nIndices = nIndices;
@@ -12,11 +14,16 @@ void initGeometryViewer(GeometryViewer &geom, uint nVertices, GLuint vbo,
     geom.m_baseColour = baseColour;
 
     glGenVertexArrays(1, &geom.m_vao);
+    checkGLError();
     glBindVertexArray(geom.m_vao);
+    checkGLError();
+    assert(geom.m_vao > 0);
 
     // 1rst attribute buffer : vertices
-    glBindBuffer(GL_ARRAY_BUFFER, geom.m_vbo);
     glEnableVertexAttribArray(0);
+    checkGLError();
+    glBindBuffer(GL_ARRAY_BUFFER, geom.m_vbo);
+    checkGLError();
     glVertexAttribPointer(0,        // attribute
                           3,        // size
                           GL_FLOAT, // type
@@ -24,7 +31,12 @@ void initGeometryViewer(GeometryViewer &geom, uint nVertices, GLuint vbo,
                           0,        // stride
                           (void *)0 // array buffer offset
     );
-    glBindVertexArray(0);
+    checkGLError();
+
+    // Index buffer
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geom.m_ibo);
+
+    // glBindVertexArray(0);
 }
 
 void drawGeometryViewer(GeometryViewer const &geom,
@@ -44,11 +56,18 @@ void drawGeometryViewer(GeometryViewer const &geom,
     glBindVertexArray(geom.m_vao);
 
     // Index buffer
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, geom.m_vbo);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geom.m_ibo);
 
+    assert(geom.m_nIndices > 0);
     glDrawElements(GL_TRIANGLES,      // mode
                    geom.m_nIndices,   // count
                    GL_UNSIGNED_SHORT, // type
-                   (void *)0          // element array buffer offset
-    );
+                   (void *)0);        // element array buffer offset
+
+    // glBindVertexArray(0);
 }

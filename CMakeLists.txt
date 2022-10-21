@@ -2,7 +2,6 @@
 cmake_minimum_required(VERSION 3.23)
 
 # Utility functions ===========================================================
-
 function(extract_macro_val MACRO_NAME HEADER_FILE)
     string(REGEX MATCH "#define ${MACRO_NAME} [0-9]+" _macro_def "${HEADER_FILE}")
     string(REGEX MATCH "[0-9]+" _macro_val "${_macro_def}")
@@ -10,9 +9,8 @@ function(extract_macro_val MACRO_NAME HEADER_FILE)
     set(extract_macro_val_RETURN ${_macro_val} PARENT_SCOPE)
 endfunction()
 
-
-#set(CUDA_HOST_COMPILER clang++)
-#set(CMAKE_CUDA_COMPILER "C:/Program Files/LLVM/bin/clang++.exe")
+# set(CUDA_HOST_COMPILER clang++)
+# set(CMAKE_CUDA_COMPILER "C:/Program Files/LLVM/bin/clang++.exe")
 set(CMAKE_CXX_STANDARD 17)
 
 add_compile_definitions(_USE_MATH_DEFINES)
@@ -40,7 +38,6 @@ set(CUDA_OPENGL_HEADERS
     ${CUDA_OPENGL_HEADER_DIR}/GeometryViewer.cuh
     ${CUDA_OPENGL_HEADER_DIR}/Geometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/GLFWState.h
-    ${CUDA_OPENGL_HEADER_DIR}/GlGeometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/LoadGeometry.cuh
     ${CUDA_OPENGL_HEADER_DIR}/GLShader.h
     ${CUDA_OPENGL_HEADER_DIR}/MacGrid.cuh
@@ -58,15 +55,13 @@ set(CUDA_OPENGL_SOURCES
     ${CUDA_OPENGL_SOURCE_DIR}/GeometryViewer.cu
     ${CUDA_OPENGL_SOURCE_DIR}/Geometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/GLFWState.cpp
-    ${CUDA_OPENGL_SOURCE_DIR}/GlGeometry.cu
-    ${CUDA_OPENGL_SOURCE_DIR}/GlGeometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/GLShader.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/LoadGeometry.cu
     ${CUDA_OPENGL_SOURCE_DIR}/MonoColourGLShader.cpp
     ${CUDA_OPENGL_SOURCE_DIR}/PlaneGLData.cpp
 )
-#set(CUDA_OPENGL_ALL_FILES ${CUDA_OPENGL_HEADERS} ${CUDA_OPENGL_SOURCES})
 
+# set(CUDA_OPENGL_ALL_FILES ${CUDA_OPENGL_HEADERS} ${CUDA_OPENGL_SOURCES})
 add_library(cuda_opengl_lib ${CUDA_OPENGL_SOURCES})
 
 target_compile_options(cuda_opengl_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
@@ -77,11 +72,10 @@ target_include_directories(cuda_opengl_lib PUBLIC ${CUDA_OPENGL_HEADER_DIR})
 set_target_properties(cuda_opengl_lib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # External libs header including and linking
-
 set(IMGUI_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/imgui/imgui-1.88")
 
 # ImGui Setup
-set(IMGUI_SRCS 
+set(IMGUI_SRCS
     ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
     ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
     ${IMGUI_ROOT}/imgui_tables.cpp
@@ -131,6 +125,7 @@ set(EIGEN_MAJOR_VERSION ${extract_macro_val_RETURN})
 
 set(EXPECTED_EIGEN_VERSION "3.4")
 set(EIGEN_VERSION "${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}")
+
 if(NOT EXPECTED_EIGEN_VERSION EQUAL EIGEN_VERSION)
     message(FATAL_ERROR "Incorrect Eigen version: '${EIGEN_VERSION}' expected: ${EXPECTED_EIGEN_VERSION}")
 endif()
@@ -144,9 +139,7 @@ message(STATUS ${ASSIMP_LIB})
 target_link_libraries(cuda_opengl_lib ${ASSIMP_LIB})
 target_include_directories(cuda_opengl_lib PUBLIC ${ASSIMP_INCLUDE_DIRS})
 
-
 # Main App ====================================================================
-
 add_executable(cuda_opengl_app)
 set_target_properties(cuda_opengl_app PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_sources(cuda_opengl_app PUBLIC ${CUDA_OPENGL_SOURCE_DIR}/main.cu)
@@ -156,9 +149,7 @@ target_compile_options(cuda_opengl_app PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     --expt-relaxed-constexpr
     >)
 
-
 # Tests =======================================================================
-
 include(CTest)
 enable_testing()
 
@@ -169,7 +160,6 @@ set(TEST_SOURCES
 )
 set(TEST_ALL_FILES ${TEST_SOURCES})
 add_executable(cuda_opengl_tests_main ${TEST_SOURCE_DIR}/main.cu ${TEST_SOURCES})
-
 
 target_compile_options(cuda_opengl_tests_main PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     --expt-relaxed-constexpr
@@ -187,10 +177,11 @@ target_include_directories(cuda_opengl_tests_main PUBLIC ${EXTERNAL_TEST_INCLUDE
 # Get and link gtest libs
 include(FetchContent)
 FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.12.1
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.12.1
 )
+
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
@@ -204,5 +195,5 @@ add_test(
     NAME cuda_opengl_tests
     COMMAND cuda_opengl_tests_main.exe)
 
-#include(GoogleTest)
-#gtest_discover_tests(cuda_opengl_tests_main)
+# include(GoogleTest)
+# gtest_discover_tests(cuda_opengl_tests_main)
