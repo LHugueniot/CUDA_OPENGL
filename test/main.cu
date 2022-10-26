@@ -432,6 +432,12 @@ TEST(Geometry, LoadGeometry)
     std::vector<std::pair<std::string, Geometry *>> nameToGeometry =
         initGeometryFromAiMeshes<Geometry>(meshes);
 
+    // std::vector<std::pair<std::string, Geometry *>> nameToGeometry =
+    //     initGeometryFromAiMeshes<Geometry,
+    //                              CuGlBufferSetter<float>,
+    //                              CuGlBufferSetter<uint>,
+    //                              CuGlBufferSetter<uint>>(meshes);
+
     for (auto [name, geometry] : nameToGeometry)
     {
         std::vector<float> vertexData;
@@ -444,6 +450,42 @@ TEST(Geometry, LoadGeometry)
 
     aiReleaseImport(sceneCache);
 }
+/*
+TEST(Geometry, CuGlBufferSetter)
+{
+    CuGlBufferSetter<float, GL_ARRAY_BUFFER> vertexBufferSetter;
+
+    std::vector<float> vertexData =
+        {
+            0, 0, 0,
+            10.f, 0, 0,
+            0, 10.f, 0,
+            0, 0, 10.f};
+
+    std::vector<float> expectedVertexData = {
+        0, 0, 0,
+        10.f, 0, 0,
+        0, 10.f, 0,
+        0, 0, 10.f};
+
+    float *d_vertexData = nullptr;
+    vertexBufferSetter.allocate(&d_vertexData, vertexData.size() * sizeof(float));
+    vertexBufferSetter.copy(d_vertexData, &vertexData[0], vertexData.size());
+
+    cutilSafeCall(
+        cudaMemcpy(devPtr, data, nElems * sizeof(T), cudaMemcpyDeviceToHost));
+
+    for (auto [name, geometry] : nameToGeometry)
+    {
+        std::vector<float> vertexData;
+        retrieveProcessedGeom(*geometry, vertexData);
+
+        ASSERT_NE(nameToMeshData.find(name), nameToMeshData.end());
+
+        ASSERT_EQ(vertexData, nameToMeshData[name].m_vertexData);
+    }
+}
+*/
 
 TEST(testTest, test)
 {

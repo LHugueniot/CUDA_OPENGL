@@ -187,10 +187,10 @@ int main(int argv, char **args)
 
     std::filesystem::path assetFile(__FILE__);
 
-    // assetFile = std::filesystem::absolute(
-    //     assetFile.parent_path() / ".." / "assets" / "PantherBoss" / "PAN.obj");
-    assetFile = std::filesystem::absolute(assetFile.parent_path() / ".." /
-                                          "assets" / "cube_simple.obj");
+    assetFile = std::filesystem::absolute(
+        assetFile.parent_path() / ".." / "assets" / "PantherBoss" / "PAN.obj");
+    // assetFile = std::filesystem::absolute(assetFile.parent_path() / ".." /
+    //                                       "assets" / "cube.obj");
     std::cout << assetFile << std::endl;
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
@@ -227,8 +227,10 @@ int main(int argv, char **args)
 
     CuGlGeometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
 
+    ///*
     CuGlBufferSetter<float> vertexBufferSetter;
     CuGlBufferSetter<uint, GL_ELEMENT_ARRAY_BUFFER> indexBufferSetter;
+
     std::vector<std::pair<std::string, Geometry *>> nameToGeometry =
         initGeometryFromAiMeshes<Geometry>(meshes, vertexBufferSetter, {},
                                            indexBufferSetter);
@@ -237,10 +239,18 @@ int main(int argv, char **args)
 
     GeometryViewer patherViewer{};
 
-    initGeometryViewer(patherViewer, vertexBufferSetter.m_glBufferId,
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferSetter.m_glBufferId);
+    checkGLError();
+
+    assert(vertexBufferSetter.m_glBufferId > 0);
+    std::cout << "vbo: " << vertexBufferSetter.m_glBufferId << std::endl;
+
+    initGeometryViewer(patherViewer,
                        vertexBufferSetter.m_nElements,
+                       vertexBufferSetter.m_glBufferId,
+                       indexBufferSetter.m_nElements,
                        indexBufferSetter.m_glBufferId,
-                       indexBufferSetter.m_nElements, &monoColourShader);
+                       &monoColourShader);
 
     std::vector<float> retrievedVertexData;
     retrievedVertexData.resize(vertexBufferSetter.m_data.size());
@@ -259,7 +269,7 @@ int main(int argv, char **args)
     assert(retrievedVertexData == vertexBufferSetter.m_data);
     assert(retrievedIndexData == indexBufferSetter.m_data);
     checkGLError();
-
+    //*/
     //=====================================MAIN LOOP===============================================
     int frame = 0;
 
@@ -341,42 +351,14 @@ int main(int argv, char **args)
             // updatePlaneVBO(gridPlane);
             // drawPlane(gridPlane, cameraVP);
 
-            /*
-                Geometry& cudaPanther = *(nameToGeometry[0].second);
-
-                GeometryViewer patherViewer;
-
-                initGeometryViewer(patherViewer,
-                                   vertexBufferSetter.m_glBufferId,
-                                   vertexBufferSetter.m_nElements,
-                                   indexBufferSetter.m_glBufferId,
-                                   indexBufferSetter.m_nElements,
-                                   &monoColourShader);
-
-                        vertexBufferSetter.m_resourceObj;
-                        patherViewer.
-            */
-
-            // Map buffer object
-            // cutilSafeCall(cudaGraphicsMapResources(1,
-            // &vertexBufferSetter.m_resourceObj, 0));
-            //
-            // size_t size;
-            // cutilSafeCall(cudaGraphicsResourceGetMappedPointer(
-            //    reinterpret_cast<void**>(cudaPanther.d_vertexPositionBufferData),
-            //    &size,
-            //    m_resourceObj));
-            //
-            // cudaPanther.
-
-            // drawGeometryViewer(patherViewer, cameraVP);
+            drawGeometryViewer(patherViewer, cameraVP);
             checkGLError();
 
-            // drawGeom(gridPlaneCu, cameraVP);
-            // checkGLError();
+            drawGeom(gridPlaneCu, cameraVP);
+            checkGLError();
 
             // Overlay imgui stuff
-            // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
             glfwSwapBuffers(window->m_glfwWindow);
         }

@@ -23,19 +23,20 @@ struct CuGlBufferSetter
     {
         m_nElements = nElems;
         m_sizeOfElement = sizeof(T);
+
+        size_t bufferSize = m_nElements * m_sizeOfElement;
+
         glGenBuffers(1, &m_glBufferId);
         checkGLError();
         glBindBuffer(GLBufferType, m_glBufferId);
         checkGLError();
-        glBufferData(GLBufferType, m_nElements * m_sizeOfElement, 0,
+        glBufferData(GLBufferType, m_nElements * m_sizeOfElement, nullptr,
                      GL_DYNAMIC_DRAW);
-        checkGLError();
-        glBindBuffer(GLBufferType, 0);
         checkGLError();
 
         // Map buffer object
         cutilSafeCall(cudaGraphicsGLRegisterBuffer(&m_resourceObj, m_glBufferId,
-                                                   cudaGraphicsRegisterFlagsNone));
+                                                   cudaGraphicsMapFlagsWriteDiscard));
 
         // Map buffer object
         cutilSafeCall(cudaGraphicsMapResources(1, &m_resourceObj, 0));
@@ -58,16 +59,19 @@ struct CuGlBufferSetter
             cudaMemcpy(devPtr, data, nElems * sizeof(T), cudaMemcpyHostToDevice));
         // Unmap buffer object
         cudaGraphicsUnmapResources(1, &m_resourceObj, 0);
+
+        glBindBuffer(GLBufferType, 0);
+        checkGLError();
     }
 
-    std::vector<T> m_data;
+    std::vector<T> m_data = {};
 
-    GLuint m_glBufferId;
+    GLuint m_glBufferId = 0;
 
-    size_t m_nElements;
-    size_t m_sizeOfElement;
+    size_t m_nElements = 0;
+    size_t m_sizeOfElement = 0;
 
-    struct cudaGraphicsResource *m_resourceObj;
+    struct cudaGraphicsResource *m_resourceObj = nullptr;
 };
 
 template <typename T>

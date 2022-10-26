@@ -1,11 +1,28 @@
 #include "GeometryViewer.cuh"
 
+/*
+struct InitGeometryViewerInfo {
+    uint nVertices;
+    GLuint vbo;
+};
+
+int foo()
+{
+    initGeometryViewer2({
+        .nVertices = 5,
+        .vbo = 1
+    });
+}
+
+ void initGeometryViewer2(InitGeometryViewerInfo const& params);
+*/
+
 void initGeometryViewer(GeometryViewer &geom, uint nVertices, GLuint vbo,
                         uint nIndices, GLuint ibo, GLuint *monoColorShader,
                         const ei::Vector3f &baseColour)
 {
     assert(vbo > 0);
-    assert(ibo > 0);
+    // assert(ibo > 0);
     geom.m_nVertices = nVertices;
     geom.m_vbo = vbo;
     geom.m_nIndices = nIndices;
@@ -13,16 +30,22 @@ void initGeometryViewer(GeometryViewer &geom, uint nVertices, GLuint vbo,
     geom.m_monoColourShader = monoColorShader;
     geom.m_baseColour = baseColour;
 
+    assert(geom.m_ibo > 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geom.m_ibo);
+    checkGLError();
+
     glGenVertexArrays(1, &geom.m_vao);
     checkGLError();
     glBindVertexArray(geom.m_vao);
     checkGLError();
     assert(geom.m_vao > 0);
 
+    assert(geom.m_vbo > 0);
+    glBindBuffer(GL_ARRAY_BUFFER, geom.m_vbo);
+    checkGLError();
+
     // 1rst attribute buffer : vertices
     glEnableVertexAttribArray(0);
-    checkGLError();
-    glBindBuffer(GL_ARRAY_BUFFER, geom.m_vbo);
     checkGLError();
     glVertexAttribPointer(0,        // attribute
                           3,        // size
