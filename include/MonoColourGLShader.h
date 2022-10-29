@@ -4,24 +4,26 @@
 #include "GLShader.h"
 #include "Utils/OpenGl.h"
 
-static const char *vertexMonoColourSource =
-    "#version 330\n"
-    "layout(location = 0) in vec3 vertex_position;\n"
-    "uniform vec3 base_colour;\n"
-    "uniform mat4 MVP;\n"
-    "out vec3 frag_colour;\n"
-    "void main() {\n"
-    "    frag_colour = base_colour;\n"
-    "      gl_Position = MVP * vec4(vertex_position, 1.0);\n"
-    "}\n";
+static const char *vertexMonoColourSource = R"V0G0N(
+#version 330
+layout(location = 0) in vec3 vertex_position;
+uniform vec3 base_colour;
+uniform mat4 MVP;
+out vec3 frag_colour;
+void main() {
+    frag_colour = vertex_position;
+    gl_Position = MVP * vec4(vertex_position, 1.0);
+};
+)V0G0N";
 
-static const char *fragmentMonoColourSource =
-    "#version 330\n"
-    "in vec3 frag_colour;\n"
-    "out vec4 colour;\n"
-    "void main() {\n"
-    "  colour = vec4(frag_colour, 1.0);\n"
-    "}\n";
+static const char *fragmentMonoColourSource = R"V0G0N(
+#version 330
+in vec3 frag_colour;
+out vec4 colour;
+void main() {
+  colour = vec4(frag_colour, 1.0);
+};
+)V0G0N";
 
 GLuint compileMonoColourShaderProgram();
 

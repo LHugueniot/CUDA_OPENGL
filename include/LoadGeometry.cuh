@@ -13,8 +13,12 @@
 #include <string>
 #include <vector>
 
-constexpr uint kDefaultImportFlags =
-    aiProcess_Triangulate | aiProcess_JoinIdenticalVertices;
+constexpr uint kDefaultImportFlags = aiProcess_Triangulate |
+                                     aiProcess_JoinIdenticalVertices |
+                                     aiProcess_ImproveCacheLocality |
+                                     aiProcess_FindInvalidData;
+
+// constexpr uint kDefaultImportFlags = 0;
 
 template <typename T, GLenum GLBufferType = GL_ARRAY_BUFFER>
 struct CuGlBufferSetter
@@ -139,6 +143,8 @@ initGeometryFromAiMeshes(const std::vector<const aiMesh *> &meshes,
         for (uint t = 0; t < meshPtr->mNumFaces; ++t)
         {
             const aiFace *face = &meshPtr->mFaces[t];
+
+            assert(face->mNumIndices == 3);
 
             for (uint vertIdx = 0; vertIdx < face->mNumIndices; vertIdx++)
             {

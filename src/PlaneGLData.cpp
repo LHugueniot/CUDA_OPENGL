@@ -14,9 +14,12 @@ void initPlaneVAO(PlaneGLData & glData){
 
     glGenVertexArrays(1, &glData.verticesArrayObject);
     glBindVertexArray(glData.verticesArrayObject);
-    glEnableVertexAttribArray(0);
+
     glBindBuffer(GL_ARRAY_BUFFER, glData.verticesBufferObject);
+    glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glBindVertexArray(0);
+    glDisableVertexAttribArray(0);
 }
 
 void updatePlaneVBO(PlaneGLData const & glData){
@@ -36,9 +39,7 @@ void drawPlane(PlaneGLData const & glData, Eigen::Matrix4f & cameraMat){
     GLuint baseColID = glGetUniformLocation(*glData.monoColourShader, "base_colour");
     glUniform3fv(baseColID, 1, glData.baseColour.data());
 
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, glData.verticesBufferObject);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glBindVertexArray(glData.verticesArrayObject);
+
     glDrawArrays(GL_LINES, 0, glData.verticesSize/3);
-    glDisableVertexAttribArray(0);
 }

@@ -15,19 +15,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-template <typename T>
-void printStdVecIn3s(std::vector<T> &vec)
-{
-    for (size_t i = 0; i < vec.size(); i += 3)
-    {
-        for (size_t j = 0; j < 3; j++)
-        {
-            std::cout << vec[i + j] << ", ";
-        }
-        std::cout << std::endl;
-    }
-}
-
 template <typename T, typename P = float>
 bool _EXPECT_NEAR(T a, T b, P p)
 {
@@ -425,7 +412,7 @@ TEST(Geometry, LoadGeometry)
     ASSERT_NE(nameToMeshData.find("Cube"), nameToMeshData.end());
 
     auto &meshData = nameToMeshData["Cube"];
-    printStdVecIn3s(meshData.m_faceIdxs);
+    printStdVecInStride(meshData.m_faceIdxs);
     ASSERT_EQ(meshData.m_vertexData.size(), 24);
     ASSERT_EQ(meshData.m_faceIdxs.size(), 36);
 

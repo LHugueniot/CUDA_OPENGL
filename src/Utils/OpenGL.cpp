@@ -30,10 +30,10 @@ GLDebugMessageCallback(GLenum source,
              <<message<<std::endl;
     auto& errMessage = errStream.str();
 
-    std::cout<<errMessage<<std::endl;
-
     if (type == GL_DEBUG_TYPE_ERROR)
     {
+        std::cout<<errMessage<<std::endl;
+
         throw std::exception(errMessage.c_str());
     }
 }

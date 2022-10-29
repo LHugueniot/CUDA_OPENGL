@@ -187,10 +187,10 @@ int main(int argv, char **args)
 
     std::filesystem::path assetFile(__FILE__);
 
-    assetFile = std::filesystem::absolute(
-        assetFile.parent_path() / ".." / "assets" / "PantherBoss" / "PAN.obj");
-    // assetFile = std::filesystem::absolute(assetFile.parent_path() / ".." /
-    //                                       "assets" / "cube.obj");
+    // assetFile = std::filesystem::absolute(
+    //     assetFile.parent_path() / ".." / "assets" / "PantherBoss" / "PAN.obj");
+    assetFile = std::filesystem::absolute(assetFile.parent_path() / ".." /
+                                          "assets" / "cube_simple.obj");
     std::cout << assetFile << std::endl;
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
@@ -220,8 +220,8 @@ int main(int argv, char **args)
         0,
     };
 
-    // PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
-    // initPlaneVAO(gridPlane);
+    PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
+    initPlaneVAO(gridPlane);
 
     assert(gridPlaneVertexData.size() > 0);
 
@@ -265,6 +265,9 @@ int main(int argv, char **args)
                              cudaPanther.d_triangleIdxBufferData,
                              indexBufferSetter.m_data.size() * sizeof(uint),
                              cudaMemcpyDeviceToHost));
+    printStdVecInStride(retrievedVertexData);
+
+    printStdVecInStride(retrievedIndexData);
 
     assert(retrievedVertexData == vertexBufferSetter.m_data);
     assert(retrievedIndexData == indexBufferSetter.m_data);
@@ -348,8 +351,9 @@ int main(int argv, char **args)
             // std::cout<<cameraVP<<std::endl;
 
             // Draw geometry
-            // updatePlaneVBO(gridPlane);
-            // drawPlane(gridPlane, cameraVP);
+            updatePlaneVBO(gridPlane);
+            drawPlane(gridPlane, cameraVP);
+            checkGLError();
 
             drawGeometryViewer(patherViewer, cameraVP);
             checkGLError();
@@ -358,7 +362,7 @@ int main(int argv, char **args)
             checkGLError();
 
             // Overlay imgui stuff
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
             glfwSwapBuffers(window->m_glfwWindow);
         }
