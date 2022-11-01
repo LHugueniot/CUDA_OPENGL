@@ -1,9 +1,23 @@
 #ifndef UTIL_EIGEN_H
 #define UTIL_EIGEN_H
 
+
+#ifdef __CUDACC__
+#pragma warning(disable : 4068)
+#pragma nv_diag_suppress 20236
+#pragma nv_diag_suppress 20014
+#pragma nv_diag_suppress 20012
+#pragma warning(disable : 4068)
+#endif
+
 #include <Eigen/Core>
 #include <Eigen/Eigen>
 #include <Eigen/Geometry>
+
+#ifdef __CUDACC__
+#pragma warning(default : 4068)
+#endif
+
 
 namespace Eigen
 {

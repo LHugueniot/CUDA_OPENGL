@@ -1,5 +1,6 @@
 # Common ======================================================================
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.25)
+include(CMakePrintHelpers)
 
 # Utility functions ===========================================================
 function(extract_macro_val MACRO_NAME HEADER_FILE)
@@ -67,77 +68,59 @@ add_library(cuda_opengl_lib ${CUDA_OPENGL_SOURCES})
 target_compile_options(cuda_opengl_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     --expt-relaxed-constexpr
     >)
-
 target_include_directories(cuda_opengl_lib PUBLIC ${CUDA_OPENGL_HEADER_DIR})
 set_target_properties(cuda_opengl_lib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-# External libs header including and linking
-set(IMGUI_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/imgui/imgui-1.88")
+# Assimp setup
+find_package(assimp CONFIG REQUIRED)
 
-# ImGui Setup
-set(IMGUI_SRCS
-    ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
-    ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
-    ${IMGUI_ROOT}/imgui_tables.cpp
-    ${IMGUI_ROOT}/imgui_widgets.cpp
-    ${IMGUI_ROOT}/imgui_draw.cpp
-    ${IMGUI_ROOT}/imgui_demo.cpp
-    ${IMGUI_ROOT}/imgui.cpp
-)
-target_sources(cuda_opengl_lib PRIVATE ${IMGUI_SRCS})
-target_include_directories(cuda_opengl_lib PUBLIC ${IMGUI_ROOT})
+# Eigen3 setup
+find_package(Eigen3 CONFIG REQUIRED)
+
+# ImGui setup
+find_package(imgui CONFIG REQUIRED)
 
 # OpenGL setup
 find_package(OpenGL REQUIRED)
-target_link_libraries(cuda_opengl_lib ${OPENGL_LIBRARY})
 
-# GLEW setup
-set(GLEW_ROOT "C:/Users/lucciano/Workspace/Libs/bin/glew-2.1.0-win32/glew-2.1.0")
-set(GLEW_INCLUDE_DIRS ${GLEW_ROOT}/include)
-set(GLEW_LIB_DIR ${GLEW_ROOT}/lib/Release/x64)
-list(APPEND CMAKE_PREFIX_PATH ${GLEW_LIB_DIR})
-find_library(GLEW_LIB "glew32")
-target_link_libraries(cuda_opengl_lib ${GLEW_LIB})
-target_include_directories(cuda_opengl_lib PUBLIC ${GLEW_INCLUDE_DIRS})
+# glew setup
+find_package(glew REQUIRED)
 
-# GLFW setup
-set(GLFW3_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/glfw-3.3.7.bin.WIN64/glfw-3.3.7.bin.WIN64")
-list(APPEND CMAKE_PREFIX_PATH ${GLFW3_ROOT})
-find_package(GLFW3 REQUIRED)
-target_link_libraries(cuda_opengl_lib ${GLFW3_LIBRARIES})
-target_include_directories(cuda_opengl_lib PUBLIC ${GLFW3_INCLUDE_DIRS})
+message(STATUS ${GLEW})
+
+# glfw3 setup
+find_package(glfw3 CONFIG REQUIRED)
 
 # CUDA setup
+set(CUDA_REQUIRED_VERSION "11.6.0")
+set(CUDA_PATHS
+    ENV CUDA_PATH
+    ENV CUDA_HOME
+    ENV CUDA_BIN_PATH
+    ENV CUDA_PATH_V11_6
+)
 find_package(CUDA REQUIRED)
-include_directories("${CUDA_INCLUDE_DIRS}")
 
-# Eigen setup
-set(EIGEN_ROOT "C:/Users/lucciano/Workspace/Libs/bin/eigen")
-set(EIGEN_INCLUDE_DIRS ${EIGEN_ROOT})
-target_include_directories(cuda_opengl_lib PUBLIC ${EIGEN_INCLUDE_DIRS})
-file(READ "${EIGEN_ROOT}/Eigen/src/Core/util/Macros.h" EIGEN_MACRO_HEADER)
+target_link_libraries(cuda_opengl_lib
+    PRIVATE
+    OpenGL::GL
+    glfw
+    Eigen3::Eigen
+    assimp::assimp
 
-# check eigen version
-extract_macro_val("EIGEN_WORLD_VERSION" ${EIGEN_MACRO_HEADER})
-set(EIGEN_WORLD_VERSION ${extract_macro_val_RETURN})
-extract_macro_val("EIGEN_MAJOR_VERSION" ${EIGEN_MACRO_HEADER})
-set(EIGEN_MAJOR_VERSION ${extract_macro_val_RETURN})
+    PUBLIC
+    imgui::imgui
+    GLEW::glew
+)
 
-set(EXPECTED_EIGEN_VERSION "3.4")
-set(EIGEN_VERSION "${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}")
+get_target_property(GLEW_INCLUDE_DIR GLEW::glew INTERFACE_INCLUDE_DIRECTORIES)
 
-if(NOT EXPECTED_EIGEN_VERSION EQUAL EIGEN_VERSION)
-    message(FATAL_ERROR "Incorrect Eigen version: '${EIGEN_VERSION}' expected: ${EXPECTED_EIGEN_VERSION}")
-endif()
+cmake_print_properties(TARGETS imgui::imgui PROPERTIES
+    LOCATION INTERFACE_INCLUDE_DIRECTORIES)
 
-set(ASSIMP_ROOT "C:/Users/lucciano/Workspace/Libs/Bin/assimp/assimp_v5.2.5")
-set(ASSIMP_INCLUDE_DIRS ${ASSIMP_ROOT}/include)
-set(ASSIMP_LIB_DIR ${ASSIMP_ROOT}/lib/Release)
-list(APPEND CMAKE_PREFIX_PATH ${ASSIMP_LIB_DIR})
-find_library(ASSIMP_LIB "assimp-vc143-mt")
-message(STATUS ${ASSIMP_LIB})
-target_link_libraries(cuda_opengl_lib ${ASSIMP_LIB})
-target_include_directories(cuda_opengl_lib PUBLIC ${ASSIMP_INCLUDE_DIRS})
+message(STATUS ${GLEW_INCLUDE_DIR})
+
+target_include_directories(cuda_opengl_lib PRIVATE ${GLEW_INCLUDE_DIR})
 
 # Main App ====================================================================
 add_executable(cuda_opengl_app)
@@ -170,26 +153,18 @@ set_target_properties(cuda_opengl_tests_main PROPERTIES CUDA_SEPARABLE_COMPILATI
 # Link application library
 target_link_libraries(cuda_opengl_tests_main PRIVATE cuda_opengl_lib)
 
-# Include test includes
-set(EXTERNAL_TEST_INCLUDES "C:/Users/lucciano/Workspace/Libs/Bin/glm/GLM-0.9.9.8")
-target_include_directories(cuda_opengl_tests_main PUBLIC ${EXTERNAL_TEST_INCLUDES})
+# GLM setup
+find_package(glm CONFIG REQUIRED)
 
-# Get and link gtest libs
-include(FetchContent)
-FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.12.1
-)
-
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
+# Gtest setup
+find_package(GTest CONFIG REQUIRED)
 
 target_link_libraries(
     cuda_opengl_tests_main
     PRIVATE
+    GTest::gtest
     GTest::gtest_main
+    glm::glm
 )
 add_test(
     NAME cuda_opengl_tests

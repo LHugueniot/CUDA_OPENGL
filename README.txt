@@ -6,3 +6,4 @@ TODO:
     * Viewer module
     * Simulation module
     * Main
+2. Add a proper package manager

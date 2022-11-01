@@ -1,0 +1,45 @@
+{
+    "name": "cuda-opengl",
+    "version": "1.0.0",
+    "dependencies": [
+        {
+            "name": "eigen3",
+            "version>=": "3.4.0"
+        },
+        {
+            "name": "glew",
+            "version>=": "2.1.0"
+        },
+        {
+            "name": "glfw3",
+            "version>=": "3.3.7"
+        },
+        {
+            "name": "assimp",
+            "version>=": "5.2.5"
+        },
+        {
+            "name": "imgui",
+            "version>=": "1.88",
+            "features": [
+                "glfw-binding",
+                "opengl3-binding"
+            ]
+        },
+        {
+            "name": "gtest",
+            "version>=": "1.12.1"
+        },
+        {
+            "name": "glm",
+            "version>=": "0.9.9.8"
+        }
+    ],
+    "overrides": [
+        {
+            "name": "glew",
+            "version": "2.1.0"
+        }
+    ],
+    "builtin-baseline": "253704407ae68efa37bf8f5b59b3e06dd40d3d3f"
+}

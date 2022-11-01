@@ -4,3 +4,4 @@ b_release/
 .vs/
 out/
 imgui.ini
+vcpkg_installed

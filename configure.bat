@@ -13,7 +13,7 @@ goto USAGE
 @echo "Configuring release build"
 mkdir b_release
 cd b_release
-cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=%VCPKG%/scripts/buildsystems/vcpkg.cmake
 cd ..
 goto END
 
@@ -21,7 +21,7 @@ goto END
 @echo "Configuring debug build"
 mkdir b_debug
 cd b_debug
-cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=%VCPKG%/scripts/buildsystems/vcpkg.cmake
 cd ..
 goto END
 
