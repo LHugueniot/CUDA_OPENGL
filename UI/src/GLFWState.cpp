@@ -166,7 +166,7 @@ void _keyPressed(GLFWwindow* window, int key, int scancode, int action, int mods
     if(windowIt == g_windowToContext.end())
         return;
     auto windowTitle = windowIt->second->m_windowTitle;
-    fprintf(stdout, "Key pressed for: %s\n", windowTitle.c_str());
+    //fprintf(stdout, "Key pressed for: %s\n", windowTitle.c_str());
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }

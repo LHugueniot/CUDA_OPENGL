@@ -152,8 +152,8 @@ int main(int argv, char **args)
 
     auto camera = Camera(mainWindow->m_windowWidth, mainWindow->m_windowHeight);
 
-    yawCamera(camera, TO_RAD(-45.f));
-    pitchCamera(camera, TO_RAD(-45.f));
+    // yawCamera(camera, TO_RAD(-45.f));
+    // pitchCamera(camera, TO_RAD(-45.f));
 
     updateCamera(camera);
 
@@ -165,12 +165,15 @@ int main(int argv, char **args)
     //     {GLFW_KEY_DOWN, Camera::ORBIT_DOWN}
     // };
     std::map<KEY_ID, Camera::Actions> cameraKeyToAction = {
-        {GLFW_KEY_W, Camera::ORBIT_UP}, {GLFW_KEY_A, Camera::ORBIT_LEFT}, {GLFW_KEY_D, Camera::ORBIT_RIGHT}, {GLFW_KEY_S, Camera::ORBIT_DOWN},
+        {GLFW_KEY_W, Camera::ORBIT_UP},
+        {GLFW_KEY_A, Camera::ORBIT_LEFT},
+        {GLFW_KEY_D, Camera::ORBIT_RIGHT},
+        {GLFW_KEY_S, Camera::ORBIT_DOWN},
 
-        {GLFW_KEY_UP, Camera::MOVE_X_P},
-        {GLFW_KEY_LEFT, Camera::MOVE_Z_M},
-        {GLFW_KEY_RIGHT, Camera::MOVE_Z_P},
-        {GLFW_KEY_DOWN, Camera::MOVE_X_M}};
+        {GLFW_KEY_UP, Camera::PAN_UP},
+        {GLFW_KEY_DOWN, Camera::PAN_DOWN},
+        {GLFW_KEY_LEFT, Camera::PAN_LEFT},
+        {GLFW_KEY_RIGHT, Camera::PAN_RIGHT}};
 
     //=====================================SHADER SETUP============================================
 
@@ -189,10 +192,9 @@ int main(int argv, char **args)
     const aiScene *sceneCache = nullptr;
 
     std::filesystem::path assetDir = std::filesystem::absolute(XSTR(ASSETS_DIRECTORY));
-    std::filesystem::path assetFile = assetDir / "PantherBoss" / "PAN.obj";
+    // std::filesystem::path assetFile = assetDir / "PantherBoss" / "PAN.obj";
+    std::filesystem::path assetFile = assetDir / "cube_simple.obj";
 
-    // assetFile = std::filesystem::absolute(assetFile.parent_path() / ".." /
-    //                                       "assets" / "cube_simple.obj");
     std::cout << assetFile << std::endl;
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);

@@ -24,10 +24,10 @@ Camera::Camera(
 {
     std::cout<<"eye: "<<_eye<<std::endl;
     std::cout<<"target: "<<_target<<std::endl;
-    transformedEye = eye;
     yaw = 0.f;
     pitch = 0.f;
     zoom = 1.f;
+    panTranslation = {0.f, 0.f, 0.f};
 
     //setProjMat(projMat, windowWidth, windowHeight, fov, far, near);
     updateProjMat(*this);
@@ -64,11 +64,18 @@ void zoomCamera(Camera& camera, float zoomAmount)
     camera.zoom = std::clamp(camera.zoom + zoomAmount, 0.f, 10.f);
 }
 
+void panCamera(Camera& camera, float x, float z)
+{
+    ei::Matrix3f R;
+    R = ei::AngleAxisf(camera.yaw, -ei::Vector3f::UnitY());
+
+    ei::Vector3f yawAdjustedXLate = {z, 0.f, x};
+    camera.panTranslation -= yawAdjustedXLate.transpose() * R;
+    std::cout << "camera.panTranslation:\n{\n" << camera.panTranslation << "\n}" << std::endl;
+}
+
 void translateCamera(Camera& camera, ei::Vector3f const& xLate)
 {
-    ei::Vector3f cameraDir = camera.target - camera.eye;
-    cameraDir.y() = 0;
-
     camera.eye += xLate;
     camera.target += xLate;
 }
@@ -90,10 +97,10 @@ void moveCamera(Camera& camera, Camera::Actions action)
             pitchCamera(camera, camera.rotationSpeed);
             break;
         case Camera::ZOOM_IN:
-            zoomCamera(camera, camera.zoomSpeed);
+            zoomCamera(camera, -camera.zoomSpeed);
             break;
         case Camera::ZOOM_OUT:
-            zoomCamera(camera, -camera.zoomSpeed);
+            zoomCamera(camera, camera.zoomSpeed);
             break;
         case Camera::MOVE_X_P:
             translateCamera(camera, {camera.xLateSpeed, 0, 0});
@@ -113,6 +120,18 @@ void moveCamera(Camera& camera, Camera::Actions action)
         case Camera::MOVE_Z_M:
             translateCamera(camera, {0, 0, -camera.xLateSpeed});
             break;
+        case Camera::PAN_UP:
+            panCamera(camera, camera.xLateSpeed, 0.f);
+            break;
+        case Camera::PAN_DOWN:
+            panCamera(camera, -camera.xLateSpeed, 0.f);
+            break;
+        case Camera::PAN_LEFT:
+            panCamera(camera, 0.f, camera.xLateSpeed);
+            break;
+        case Camera::PAN_RIGHT:
+            panCamera(camera, 0.f, -camera.xLateSpeed);
+            break;
     }
 }
 
@@ -120,10 +139,18 @@ void updateCamera(Camera& camera)
 {
     ei::Matrix3f R_yaw; 
     R_yaw = ei::AngleAxisf(camera.yaw, ei::Vector3f::UnitY());
+
     ei::Matrix3f R_pitch;
     R_pitch = ei::AngleAxisf(camera.pitch, ei::Vector3f::UnitX());
-    camera.transformedEye = (R_yaw * R_pitch * (
-        camera.zoom * (camera.eye - camera.target))) + camera.target;
-    ei_utils::setLookAt(camera.viewMat, camera.transformedEye,
-        camera.target, ei::Vector3f::UnitY());
+
+    ei::Vector3f transformedEye = (
+        R_yaw * R_pitch * (
+            camera.zoom * (
+                (camera.eye - camera.target)
+            )
+        )
+    ) + camera.target;
+
+    ei_utils::setLookAt(camera.viewMat, transformedEye + camera.panTranslation,
+        camera.target + camera.panTranslation, ei::Vector3f::UnitY());
 }

@@ -20,14 +20,18 @@ struct Camera
         MOVE_Y_M,
         MOVE_Z_P,
         MOVE_Z_M,
+        PAN_UP,
+        PAN_DOWN,
+        PAN_LEFT,
+        PAN_RIGHT
     };
 
     Camera(float _windowWidth, float _windowHeight,
-           ei::Vector3f const &_eye = {0.f, 0.f, 30.f},
+           ei::Vector3f const &_eye = {0.f, 30.f, 30.f},
            ei::Vector3f const &_target = {0.f, 0.f, 0.f},
            float _fov = TO_RAD(50), // In rads
-           float _far = 200.f, float _near = 1.f, float _rotationSpeed = 0.05f,
-           float _zoomSpeed = 0.05f, float _xLateSpeed = 0.01f);
+           float _far = 200.f, float _near = 1.f, float _rotationSpeed = 0.01f,
+           float _zoomSpeed = 0.05f, float _xLateSpeed = 0.05f);
 
     ei::Matrix4f viewMat;
 
@@ -39,9 +43,12 @@ struct Camera
     // Trackball parameters
     float yaw, pitch, zoom;
 
+    ei::Vector3f panTranslation;
+
     float rotationSpeed, zoomSpeed, xLateSpeed;
 
-    ei::Vector3f target, eye, transformedEye;
+    ei::Vector3f target, eye;
+
 };
 
 void updateProjMat(Camera &camera);
