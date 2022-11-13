@@ -10,7 +10,7 @@ add_executable(cuda_opengl_tests_main ${TESTS_SRC}/main.cu)
 target_compile_options(
     cuda_opengl_tests_main
 
-    PRIVATE
+    PUBLIC
     $<$<COMPILE_LANGUAGE:CUDA>:
     --expt-relaxed-constexpr
     >)

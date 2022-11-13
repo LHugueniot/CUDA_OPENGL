@@ -1,6 +1,7 @@
 #include "Geometry/Geometry.cuh"
+#include "Utils/General.h"
 
-struct WorldState
+struct WorldProperties
 {
     const ei::Vector3f m_gravConstant = {0.f, -9.8f, 0.f};
     const float m_timeStep = 1.f / 60.f;
@@ -33,10 +34,11 @@ struct PBDGeometry : Geometry
 
     // Indices of fixed vertices
     uint *d_fixedVertexIdxBufferData = nullptr;
-    uint *d_nFixedVertexIdxBufferElems = nullptr;
+    uint d_nFixedVertexIdxBufferElems = 0;
 
     // Device buffer containing the length of distance constraints
     float *d_distanceConstraintLengthBufferData = nullptr;
+    uint d_nDistanceConstraintLengthBufferElems = 0;
     // Device buffer containing pairs of indices to vertices
     // representing a distance constraint
     uint *d_distanceConstraintsIdxBufferData = nullptr;
@@ -54,12 +56,8 @@ struct PBDGeometry : Geometry
     float *d_nVertexMassesBufferElems = nullptr;
 };
 
-template <typename FixedVertexIxd_t, uint fixedVertexIdxsSize>
-PBDGeometry initializePBDParameters(Geometry &geometry,
-                                    FixedVertexIxd_t fixedVertexIdxs)
-{
-    // geometry
-}
+bool initializePBDParameters(PBDGeometry &g,
+                             uint *fixedVertexIdxs,
+                             uint nFixedVertexIdxsElems);
 
-void stepPBD(PBDGeometry &geometry,
-             WorldState &worldState);
+void stepPBD(PBDGeometry &geometry, WorldProperties &worldProperties);

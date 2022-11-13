@@ -3,6 +3,9 @@
 
 #include <algorithm>
 #include <iostream>
+#include <list>
+#include <map>
+#include <set>
 #include <vector>
 
 //#ifndef __cplusplus < 201703L
@@ -29,6 +32,8 @@ using uint = unsigned int;
         assert((condition));                    \
     } while (false)
 
+#define WARNING_MSG(msg) printf("BREAK POINT - FILE %s - LINE %i : %s\n", __FILE__, __LINE__, msg)
+
 template <typename T>
 void printStdVecInStride(std::vector<T> &vec, uint stride = 3)
 {
@@ -40,6 +45,84 @@ void printStdVecInStride(std::vector<T> &vec, uint stride = 3)
         }
         std::cout << std::endl;
     }
+}
+
+std::pair<uint, uint> makeOrderedIdxPair(uint idx1, uint idx2);
+
+struct TabIndentContext
+{
+    TabIndentContext();
+
+    ~TabIndentContext();
+
+    friend std::ostream &operator<<(std::ostream &os, const TabIndentContext &ctx);
+};
+
+template <typename T1, typename T2>
+std::ostream &operator<<(std::ostream &os, const std::pair<T1, T2> &idxPair)
+{
+    os << "{" << idxPair.first << ", " << idxPair.second << "}";
+    return os;
+}
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const std::list<T> &l)
+{
+    TabIndentContext tabCtx;
+
+    os << "{\n";
+    for (auto &e : l)
+    {
+        os << tabCtx << e << ",\n";
+    }
+    os << "}";
+    return os;
+}
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const std::set<T> &s)
+{
+    TabIndentContext tabCtx;
+
+    os << "{\n";
+    for (auto &e : s)
+    {
+        os << tabCtx << e << ",\n";
+    }
+    os << "}";
+    return os;
+}
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
+{
+    os << "{\n";
+    {
+        TabIndentContext tabCtx;
+
+        for (auto &e : v)
+        {
+            os << tabCtx << e << ",\n";
+        }
+    }
+    os << "}";
+    return os;
+}
+
+template <typename T1, typename T2>
+std::ostream &operator<<(std::ostream &os, const std::map<T1, T2> &m)
+{
+    TabIndentContext tabCtx;
+    os << tabCtx << "{\n";
+    for (auto &[k, v] : m)
+    {
+        TabIndentContext tabCtx2;
+        os << tabCtx2 << k << " :\n";
+
+        TabIndentContext tabCtx3;
+        os << tabCtx3 << v << ",\n";
+    }
+    os << tabCtx << "\n}\n";
+    return os;
 }
 
 #endif /* UTIL_GENERAL_H */

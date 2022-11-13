@@ -29,7 +29,6 @@ loadAiMeshes(const std::filesystem::path &sceneFilePath,
         throw std::exception(errStream.str().c_str());
     }
 
-    auto rootNode = sceneCache->mRootNode;
     std::vector<const aiMesh *> result;
 
     if (uint numMeshes = sceneCache->mNumMeshes)

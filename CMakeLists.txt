@@ -33,7 +33,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # glew setup
-find_package(glew REQUIRED)
+find_package(GLEW REQUIRED)
 
 # glfw3 setup
 find_package(glfw3 CONFIG REQUIRED)
@@ -68,7 +68,7 @@ add_executable(cuda_opengl_app)
 # Pre setup
 set_target_properties(cuda_opengl_app PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-target_compile_options(cuda_opengl_app PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+target_compile_options(cuda_opengl_app PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:
     --expt-relaxed-constexpr
     >)
 

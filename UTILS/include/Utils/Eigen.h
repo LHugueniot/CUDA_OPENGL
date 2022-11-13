@@ -1,7 +1,6 @@
 #ifndef UTIL_EIGEN_H
 #define UTIL_EIGEN_H
 
-
 #ifdef __CUDACC__
 #pragma warning(disable : 4068)
 #pragma nv_diag_suppress 20236
@@ -17,7 +16,6 @@
 #ifdef __CUDACC__
 #pragma warning(default : 4068)
 #endif
-
 
 namespace Eigen
 {
@@ -40,6 +38,13 @@ void setProjMat(ei::Matrix4f &projMat, float windowWidth, float windowHeight,
 
 void setLookAt(ei::Matrix4f &viewMat, ei::Vector3f const &position,
                ei::Vector3f const &target, ei::Vector3f const &up);
+
+/*
+__host__ float length(ei::Vector3f const &v)
+{
+    return sqrt(v.x() * v.x() + v.y() * v.y() + v.z() * v.z());
+}
+*/
 
 } // namespace ei_utils
 

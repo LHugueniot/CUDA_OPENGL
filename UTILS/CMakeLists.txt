@@ -6,6 +6,7 @@ add_library(
 
     STATIC
     ${UTILS_SRC}/Eigen.cpp
+    ${UTILS_SRC}/General.cpp
     ${UTILS_SRC}/Mesh.cpp
     ${UTILS_SRC}/OpenGL.cpp
 )
@@ -28,3 +29,7 @@ target_link_libraries(
     imgui::imgui
     GLEW::glew
 )
+
+target_compile_options(Utils PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:
+    --expt-relaxed-constexpr
+    >)

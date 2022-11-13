@@ -1,9 +1,6 @@
 TODO:
 
-1. Split the app into multiple modules:
-    * UI module
-    * Geometry module
-    * Viewer module
-    * Simulation module
-    * Main
-2. Add a proper package manager
+1. Refactor Camera class
+2. Refactor GLFWState
+3. Create a gl_device_vector class, with all the same methods as device_vector,
+    but containing all the info for an opengl interop buffer. Maybe....

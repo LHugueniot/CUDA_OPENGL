@@ -35,6 +35,8 @@
 #define STR(s) #s
 #define XSTR(s) STR(s)
 
+static constexpr char *kAssetDirectory = XSTR(ASSETS_DIRECTORY);
+
 void ImGuiHelloWorld(bool showDemoWindow, ImVec4 &clearColor)
 {
     static float f = 0.0f;
@@ -191,7 +193,7 @@ int main(int argv, char **args)
     //=====================================SCENE DATA LOAD=========================================
     const aiScene *sceneCache = nullptr;
 
-    std::filesystem::path assetDir = std::filesystem::absolute(XSTR(ASSETS_DIRECTORY));
+    std::filesystem::path assetDir = std::filesystem::absolute(kAssetDirectory);
     // std::filesystem::path assetFile = assetDir / "PantherBoss" / "PAN.obj";
     std::filesystem::path assetFile = assetDir / "cube_simple.obj";
 
@@ -227,11 +229,8 @@ int main(int argv, char **args)
     PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
     initPlaneVAO(gridPlane);
 
-    assert(gridPlaneVertexData.size() > 0);
-
     CuGlGeometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
 
-    ///*
     CuGlBufferSetter<float> vertexBufferSetter;
     CuGlBufferSetter<uint, GL_ELEMENT_ARRAY_BUFFER> indexBufferSetter;
 
@@ -243,12 +242,6 @@ int main(int argv, char **args)
 
     GeometryViewer patherViewer{};
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferSetter.m_glBufferId);
-    checkGLError();
-
-    assert(vertexBufferSetter.m_glBufferId > 0);
-    std::cout << "vbo: " << vertexBufferSetter.m_glBufferId << std::endl;
-
     initGeometryViewer(patherViewer,
                        vertexBufferSetter.m_nElements,
                        vertexBufferSetter.m_glBufferId,
@@ -256,27 +249,6 @@ int main(int argv, char **args)
                        indexBufferSetter.m_glBufferId,
                        &monoColourShader);
 
-    std::vector<float> retrievedVertexData;
-    retrievedVertexData.resize(vertexBufferSetter.m_data.size());
-    cutilSafeCall(cudaMemcpy(&retrievedVertexData.data()[0],
-                             cudaPanther.d_vertexPositionBufferData,
-                             vertexBufferSetter.m_data.size() * sizeof(float),
-                             cudaMemcpyDeviceToHost));
-
-    std::vector<uint> retrievedIndexData;
-    retrievedIndexData.resize(indexBufferSetter.m_data.size());
-    cutilSafeCall(cudaMemcpy(&retrievedIndexData.data()[0],
-                             cudaPanther.d_triangleIdxBufferData,
-                             indexBufferSetter.m_data.size() * sizeof(uint),
-                             cudaMemcpyDeviceToHost));
-    printStdVecInStride(retrievedVertexData);
-
-    printStdVecInStride(retrievedIndexData);
-
-    assert(retrievedVertexData == vertexBufferSetter.m_data);
-    assert(retrievedIndexData == indexBufferSetter.m_data);
-    checkGLError();
-    //*/
     //=====================================MAIN LOOP===============================================
     int frame = 0;
 

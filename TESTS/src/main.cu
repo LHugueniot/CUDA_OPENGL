@@ -8,12 +8,18 @@
 
 #include "Geometry/Geometry.cuh"
 #include "Geometry/LoadGeometry.cuh"
+#include "Sim/PBD/PBDSolver.cuh"
 #include "Viewer/Camera.h"
 
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#define STR(s) #s
+#define XSTR(s) STR(s)
+
+static constexpr char *kAssetDirectory = XSTR(ASSETS_DIRECTORY);
 
 template <typename T, typename P = float>
 bool _EXPECT_NEAR(T a, T b, P p)
@@ -362,11 +368,8 @@ TEST(Geometry, LoadGeometry)
 {
     const aiScene *sceneCache = nullptr;
 
-    std::filesystem::path assetFile(__FILE__);
-
-    assetFile = std::filesystem::absolute(
-        assetFile.parent_path() / ".." / "assets" / "cube_simple.obj");
-    std::cout << assetFile << std::endl;
+    std::filesystem::path assetDir = std::filesystem::absolute(kAssetDirectory);
+    std::filesystem::path assetFile = assetDir / "cube_simple.obj";
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
 
@@ -436,6 +439,50 @@ TEST(Geometry, LoadGeometry)
     }
 
     aiReleaseImport(sceneCache);
+}
+
+TEST(PBDSolver, initializePBDParameters)
+{
+    const aiScene *sceneCache = nullptr;
+
+    std::filesystem::path assetDir = std::filesystem::absolute(kAssetDirectory);
+    std::filesystem::path assetFile = assetDir / "cube.obj";
+
+    std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
+
+    DefaultCudaBufferSetter<uint> edgeSetter;
+    std::vector<std::pair<std::string, PBDGeometry *>> nameToGeometry =
+        initGeometryFromAiMeshes<PBDGeometry>(meshes, {}, edgeSetter, {});
+
+    std::cout << edgeSetter.m_data << std::endl;
+
+    ASSERT_EQ(false, true);
+    PBDGeometry *cubeGeom;
+    for (auto &[name, geomPtr] : nameToGeometry)
+        if (name == "Cube")
+            cubeGeom = geomPtr;
+
+    ASSERT_NE(cubeGeom, nullptr);
+
+    uint *h_edgeIdxBufferData = new uint[cubeGeom->d_nEdgeIdxBufferElems];
+    cutilSafeCall(cudaMemcpy(h_edgeIdxBufferData,
+                             cubeGeom->d_edgeIdxBufferData,
+                             cubeGeom->d_nEdgeIdxBufferElems,
+                             cudaMemcpyDeviceToHost));
+    std::cout << "cubeGeom->d_nEdgeIdxBufferElems: " << cubeGeom->d_nEdgeIdxBufferElems << std::endl;
+    for (uint i = 0; i < cubeGeom->d_nEdgeIdxBufferElems; i++)
+    {
+        std::cout << h_edgeIdxBufferData[i] << std::endl;
+    }
+
+    return;
+
+    for (auto &[name, geometry] : nameToGeometry)
+    {
+        uint fixedVertexIdx = 0;
+        uint nFixedVertexIdx = 1;
+        initializePBDParameters(*geometry, &fixedVertexIdx, nFixedVertexIdx);
+    }
 }
 /*
 TEST(Geometry, CuGlBufferSetter)

@@ -134,11 +134,10 @@ initGeometryFromAiMeshes(const std::vector<const aiMesh *> &meshes,
         vertexBufferSetter.copy(geom->d_vertexPositionBufferData, vertexData,
                                 geom->d_nVertexPositionBufferElems);
 
-        uint nEdgeIdxElems = meshPtr->mNumFaces * 6;
-        uint *edgeIdxData = new uint[nEdgeIdxElems];
-
         uint nFaceIdxElems = meshPtr->mNumFaces * 3;
         uint *faceIdxData = new uint[nFaceIdxElems];
+
+        std::set<std::pair<uint, uint>> uniqueEdgeIdxs;
 
         for (uint t = 0; t < meshPtr->mNumFaces; ++t)
         {
@@ -148,12 +147,33 @@ initGeometryFromAiMeshes(const std::vector<const aiMesh *> &meshes,
 
             for (uint vertIdx = 0; vertIdx < face->mNumIndices; vertIdx++)
             {
-                edgeIdxData[t * 6 + vertIdx * 2] = face->mIndices[vertIdx];
-                edgeIdxData[t * 6 + vertIdx * 2 + 1] =
-                    face->mIndices[(vertIdx + 1) % face->mNumIndices];
+                uniqueEdgeIdxs.insert(
+                    makeOrderedIdxPair(face->mIndices[vertIdx],
+                                       face->mIndices[(vertIdx + 1) % face->mNumIndices]));
 
                 faceIdxData[t * 3 + vertIdx] = face->mIndices[vertIdx];
             }
+        }
+
+        uint nEdgeIdxElems = uniqueEdgeIdxs.size() * 2;
+        uint *edgeIdxData = new uint[nEdgeIdxElems];
+
+        // std::cout << "nEdgeIdxElems: " << nEdgeIdxElems << std::endl;
+        // std::cout << uniqueEdgeIdxs << std::endl;
+
+        uint i = 0;
+        for (const auto &edge : uniqueEdgeIdxs)
+        {
+            edgeIdxData[i * 2] = edge.first;
+            edgeIdxData[i * 2 + 1] = edge.second;
+            i++;
+        }
+
+        std::cout << "geom->d_nEdgeIdxBufferElems: " << geom->d_nEdgeIdxBufferElems << std::endl;
+        for (size_t i = 0; i < nEdgeIdxElems; i++)
+        {
+            std::cout << edgeIdxData[i] << std::endl;
+            /* code */
         }
 
         // Allocate device memory for edges
