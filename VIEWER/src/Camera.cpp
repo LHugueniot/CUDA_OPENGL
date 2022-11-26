@@ -22,8 +22,6 @@ Camera::Camera(
         zoomSpeed(_zoomSpeed),
         xLateSpeed(_xLateSpeed)
 {
-    std::cout<<"eye: "<<_eye<<std::endl;
-    std::cout<<"target: "<<_target<<std::endl;
     yaw = 0.f;
     pitch = 0.f;
     zoom = 1.f;
@@ -71,7 +69,6 @@ void panCamera(Camera& camera, float x, float z)
 
     ei::Vector3f yawAdjustedXLate = {z, 0.f, x};
     camera.panTranslation -= yawAdjustedXLate.transpose() * R;
-    std::cout << "camera.panTranslation:\n{\n" << camera.panTranslation << "\n}" << std::endl;
 }
 
 void translateCamera(Camera& camera, ei::Vector3f const& xLate)

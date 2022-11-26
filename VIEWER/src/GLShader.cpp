@@ -22,7 +22,6 @@ std::string getShaderError(GLuint handle,
     auto infoLogString = std::string(infoLog);
     delete[] infoLog;
 
-    std::cout<<infoLogString<<std::endl;
     return infoLogString;
 }
 

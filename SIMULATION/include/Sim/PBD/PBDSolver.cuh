@@ -32,32 +32,36 @@ struct PBDGeometry : Geometry
 
     /// ========================PBD specific=========================
 
-    // Indices of fixed vertices
-    uint *d_fixedVertexIdxBufferData = nullptr;
-    uint d_nFixedVertexIdxBufferElems = 0;
+    struct PBDData
+    {
+        // Indices of fixed vertices
+        uint *d_fixedVertexIdxBufferData = nullptr;
+        uint d_nFixedVertexIdxBufferElems = 0;
 
-    // Device buffer containing the length of distance constraints
-    float *d_distanceConstraintLengthBufferData = nullptr;
-    uint d_nDistanceConstraintLengthBufferElems = 0;
-    // Device buffer containing pairs of indices to vertices
-    // representing a distance constraint
-    uint *d_distanceConstraintsIdxBufferData = nullptr;
-    uint d_nDistanceConstraintsIdxBufferElems = 0;
+        // Device buffer containing the length of distance constraints
+        float *d_distanceConstraintLengthBufferData = nullptr;
+        uint d_nDistanceConstraintLengthBufferElems = 0;
 
-    // Distance constraint sets grouped by color according to a color
-    // graphing algorithm
-    uint **d_distanceConstraintSets = nullptr;
-    uint d_nDistanceConstraintSets = 0;
-    uint *d_nDistanceConstraintsPerSet = nullptr;
+        // Device buffer containing pairs of indices to vertices
+        // representing a distance constraint
+        uint *d_distanceConstraintsIdxBufferData = nullptr;
+        uint d_nDistanceConstraintsIdxBufferElems = 0;
 
-    // Vertex velocities buffer size will be d_nVertexPositionBufferElems
-    float *d_vertexVelocitiesBufferData = nullptr;
-    // Num of vertex masse elems in buffer will be d_nVertexPositionBufferElems/3
-    float *d_nVertexMassesBufferElems = nullptr;
+        // Distance constraint sets grouped by color according to a color
+        // graphing algorithm
+        uint **d_distanceConstraintSets = nullptr;
+        uint d_nDistanceConstraintSets = 0;
+        uint *d_nDistanceConstraintsPerSet = nullptr;
+
+        // Vertex velocities buffer size will be d_nVertexPositionBufferElems
+        float *d_vertexVelocitiesBufferData = nullptr;
+        // Num of vertex masse elems in buffer will be d_nVertexPositionBufferElems/3
+        float *d_vertexMassesBufferData = nullptr;
+    } pbdData;
 };
 
 bool initializePBDParameters(PBDGeometry &g,
                              uint *fixedVertexIdxs,
                              uint nFixedVertexIdxsElems);
 
-void stepPBD(PBDGeometry &geometry, WorldProperties &worldProperties);
+void runPBDSolver(PBDGeometry &g, WorldProperties &worldProperties);

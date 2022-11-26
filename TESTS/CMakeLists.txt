@@ -47,7 +47,7 @@ target_link_libraries(
 )
 add_test(
     NAME cuda_opengl_tests
-    COMMAND cuda_opengl_tests_main.exe)
+    COMMAND TESTS/cuda_opengl_tests_main.exe)
 
 # include(GoogleTest)
 # gtest_discover_tests(cuda_opengl_tests_main)

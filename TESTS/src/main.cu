@@ -72,6 +72,23 @@ void print_glm_mat4(glm::mat4 &mat)
     }
 }
 
+template <typename T>
+std::vector<T> deviceToContainer(T *d_ptr, size_t nElems)
+{
+    std::vector<T> result(nElems);
+
+    cutilSafeCall(cudaMemcpy(result.data(),
+                             d_ptr,
+                             nElems * sizeof(T),
+                             cudaMemcpyDeviceToHost));
+    return result;
+}
+
+float length(ei::Vector3f const &v)
+{
+    return sqrt(v.x() * v.x() + v.y() * v.y() + v.z() * v.z());
+}
+
 TEST(EigenTests, ProjectionAndViewTest)
 {
     float radians_fov = 45.0f;
@@ -378,6 +395,7 @@ TEST(Geometry, LoadGeometry)
     struct MeshData
     {
         std::vector<float> m_vertexData;
+        std::vector<uint> m_edgeIdxs;
         std::vector<uint> m_faceIdxs;
     };
     std::map<std::string, MeshData> nameToMeshData;
@@ -388,7 +406,7 @@ TEST(Geometry, LoadGeometry)
 
         meshData.m_vertexData.reserve(meshPtr->mNumVertices * 3);
 
-        std::cout << meshPtr->mNumVertices << std::endl;
+        // std::cout << meshPtr->mNumVertices << std::endl;
         for (uint v = 0; v < meshPtr->mNumVertices; v++)
         {
             for (uint d = 0; d < 3; d++)
@@ -415,7 +433,9 @@ TEST(Geometry, LoadGeometry)
     ASSERT_NE(nameToMeshData.find("Cube"), nameToMeshData.end());
 
     auto &meshData = nameToMeshData["Cube"];
-    printStdVecInStride(meshData.m_faceIdxs);
+
+    // printStdVecInStride(meshData.m_faceIdxs);
+
     ASSERT_EQ(meshData.m_vertexData.size(), 24);
     ASSERT_EQ(meshData.m_faceIdxs.size(), 36);
 
@@ -427,6 +447,21 @@ TEST(Geometry, LoadGeometry)
     //                              CuGlBufferSetter<float>,
     //                              CuGlBufferSetter<uint>,
     //                              CuGlBufferSetter<uint>>(meshes);
+
+    Geometry *gPtr;
+    for (auto &[name, geomPtr] : nameToGeometry)
+        if (name == "Cube")
+            gPtr = geomPtr;
+
+    ASSERT_NE(gPtr, nullptr);
+
+    Geometry &g = *gPtr;
+
+    std::vector<uint> edgeIndices = deviceToContainer(
+        g.d_edgeIdxBufferData,
+        g.d_nEdgeIdxBufferElems);
+
+    ASSERT_EQ(edgeIndices.size(), 18 * 2);
 
     for (auto [name, geometry] : nameToGeometry)
     {
@@ -441,12 +476,12 @@ TEST(Geometry, LoadGeometry)
     aiReleaseImport(sceneCache);
 }
 
-TEST(PBDSolver, initializePBDParameters)
+TEST(PBDGeometry, initializePBDParameters)
 {
     const aiScene *sceneCache = nullptr;
 
     std::filesystem::path assetDir = std::filesystem::absolute(kAssetDirectory);
-    std::filesystem::path assetFile = assetDir / "cube.obj";
+    std::filesystem::path assetFile = assetDir / "cube_simple.obj";
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
 
@@ -454,9 +489,8 @@ TEST(PBDSolver, initializePBDParameters)
     std::vector<std::pair<std::string, PBDGeometry *>> nameToGeometry =
         initGeometryFromAiMeshes<PBDGeometry>(meshes, {}, edgeSetter, {});
 
-    std::cout << edgeSetter.m_data << std::endl;
+    // std::cout << edgeSetter.m_data << std::endl;
 
-    ASSERT_EQ(false, true);
     PBDGeometry *cubeGeom;
     for (auto &[name, geomPtr] : nameToGeometry)
         if (name == "Cube")
@@ -467,23 +501,134 @@ TEST(PBDSolver, initializePBDParameters)
     uint *h_edgeIdxBufferData = new uint[cubeGeom->d_nEdgeIdxBufferElems];
     cutilSafeCall(cudaMemcpy(h_edgeIdxBufferData,
                              cubeGeom->d_edgeIdxBufferData,
-                             cubeGeom->d_nEdgeIdxBufferElems,
+                             cubeGeom->d_nEdgeIdxBufferElems * sizeof(uint),
                              cudaMemcpyDeviceToHost));
-    std::cout << "cubeGeom->d_nEdgeIdxBufferElems: " << cubeGeom->d_nEdgeIdxBufferElems << std::endl;
-    for (uint i = 0; i < cubeGeom->d_nEdgeIdxBufferElems; i++)
+
+    // for (uint i = 0; i < cubeGeom->d_nEdgeIdxBufferElems; i++)
+    // {
+    //     std::cout << h_edgeIdxBufferData[i] << std::endl;
+    // }
+
+    uint fixedVertexIdx = 0;
+    uint nFixedVertexIdx = 1;
+    auto &g = *cubeGeom;
+    auto &p = g.pbdData;
+    initializePBDParameters(g, &fixedVertexIdx, nFixedVertexIdx);
+
+    ASSERT_EQ(p.d_nFixedVertexIdxBufferElems, 1);
+
+    std::vector<uint> fixedVertexIdxBufferData = deviceToContainer(
+        p.d_fixedVertexIdxBufferData,
+        p.d_nFixedVertexIdxBufferElems);
+
+    ASSERT_EQ(fixedVertexIdxBufferData.size(), 1);
+    ASSERT_EQ(fixedVertexIdxBufferData[0], 0);
+
+    std::vector<float> distanceConstraintLengths = deviceToContainer(
+        p.d_distanceConstraintLengthBufferData,
+        p.d_nDistanceConstraintLengthBufferElems);
+    std::vector<float> expectedDistanceConstraintLengths;
+
+    ASSERT_EQ(distanceConstraintLengths.size(), 18);
+
+    std::vector<float> vertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    std::vector<uint> edgeIndices = deviceToContainer(
+        g.d_edgeIdxBufferData,
+        g.d_nEdgeIdxBufferElems);
+
+    auto &getVector3fs = [](std::vector<float> v, size_t i)
     {
-        std::cout << h_edgeIdxBufferData[i] << std::endl;
+        return ei::Vector3f{{v[i], v[i + 1], v[i + 2]}};
+    };
+    auto &get2Vector3fs = [](std::vector<float> v, size_t i)
+    {
+        return std::pair<ei::Vector3f, ei::Vector3f>{
+            {v[i], v[i + 1], v[i + 2]},
+            {v[i + 3], v[i + 4], v[i + 5]}};
+    };
+
+    ASSERT_EQ(edgeIndices.size(), 18 * 2);
+    ASSERT_EQ(vertexPositions.size() % 6, 0);
+
+    for (size_t i = 0; i < edgeIndices.size(); i += 2)
+    {
+        uint idx1 = edgeIndices[i] * 3;
+        uint idx2 = edgeIndices[i + 1] * 3;
+
+        auto v1 = getVector3fs(vertexPositions, idx1);
+        auto v2 = getVector3fs(vertexPositions, idx2);
+
+        auto diff = v2 - v1;
+
+        expectedDistanceConstraintLengths.push_back(length(diff));
     }
 
-    return;
+    ASSERT_EQ(distanceConstraintLengths, expectedDistanceConstraintLengths);
 
-    for (auto &[name, geometry] : nameToGeometry)
+    std::vector<uint> distanceConstraintsIndices = deviceToContainer(
+        p.d_distanceConstraintsIdxBufferData,
+        p.d_nDistanceConstraintsIdxBufferElems);
+
+    ASSERT_EQ(distanceConstraintsIndices, edgeIndices);
+
+    std::vector<std::vector<uint>> distanceConstraintSets;
+    std::vector<uint *> distanceConstraintSetsDevicePtrs = deviceToContainer(
+        p.d_distanceConstraintSets,
+        p.d_nDistanceConstraintSets);
+
+    std::vector<uint> nDistanceConstraintsPerSet = deviceToContainer(
+        p.d_nDistanceConstraintsPerSet,
+        p.d_nDistanceConstraintSets);
+
+    for (size_t i = 0; i < nDistanceConstraintsPerSet.size(); i++)
     {
-        uint fixedVertexIdx = 0;
-        uint nFixedVertexIdx = 1;
-        initializePBDParameters(*geometry, &fixedVertexIdx, nFixedVertexIdx);
+        auto nDistanceConstraints = nDistanceConstraintsPerSet[i];
+        distanceConstraintSets.push_back(
+            deviceToContainer(
+                distanceConstraintSetsDevicePtrs[i],
+                nDistanceConstraints));
+    }
+
+    // Assert there is maximum one reference to a vertex index in each set
+    for (const auto &dcSet : distanceConstraintSets)
+    {
+        std::map<uint, uint> idxToFrequency;
+
+        for (auto &&idx : dcSet)
+        {
+            const auto [currEdgeItr, success] = idxToFrequency.insert({idx, 0});
+
+            idxToFrequency[idx] += 1;
+            ASSERT_EQ(currEdgeItr->second, 1);
+        }
+    }
+
+    // std::cout << g.d_nVertexPositionBufferElems << std::endl;
+    std::vector<float> vertexVelocitiesBuffer = deviceToContainer(
+        p.d_vertexVelocitiesBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    ASSERT_EQ(vertexVelocitiesBuffer.size(), 24);
+    for (auto &&e : vertexVelocitiesBuffer)
+    {
+        ASSERT_EQ(e, 0.f);
+    }
+
+    size_t nVertices = g.d_nVertexPositionBufferElems / size_t(3);
+    std::vector<float> vertexMassesBuffer = deviceToContainer(
+        p.d_vertexMassesBufferData,
+        nVertices);
+
+    ASSERT_EQ(vertexMassesBuffer.size(), 8);
+    for (auto &&e : vertexMassesBuffer)
+    {
+        ASSERT_EQ(e, 1.f);
     }
 }
+
 /*
 TEST(Geometry, CuGlBufferSetter)
 {

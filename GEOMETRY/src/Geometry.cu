@@ -12,7 +12,7 @@ void __global__ scaleVertices(const ei::Vector3f scale,
     if (!(endIdx < vertexBufferSize))
         return;
 
-    Eigen::Map<ei::Vector3f> vertex(&vertexBufferData[idx]);
+    ei::Map<ei::Vector3f> vertex(&vertexBufferData[idx]);
     ei::Vector3f diff = (vertex - pivot);
     diff = {diff.x() * scale.x(), diff.y() * scale.y(), diff.z() * scale.z()};
     vertex = diff + pivot;

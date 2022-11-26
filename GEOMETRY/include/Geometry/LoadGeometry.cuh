@@ -158,22 +158,12 @@ initGeometryFromAiMeshes(const std::vector<const aiMesh *> &meshes,
         uint nEdgeIdxElems = uniqueEdgeIdxs.size() * 2;
         uint *edgeIdxData = new uint[nEdgeIdxElems];
 
-        // std::cout << "nEdgeIdxElems: " << nEdgeIdxElems << std::endl;
-        // std::cout << uniqueEdgeIdxs << std::endl;
-
         uint i = 0;
         for (const auto &edge : uniqueEdgeIdxs)
         {
             edgeIdxData[i * 2] = edge.first;
             edgeIdxData[i * 2 + 1] = edge.second;
             i++;
-        }
-
-        std::cout << "geom->d_nEdgeIdxBufferElems: " << geom->d_nEdgeIdxBufferElems << std::endl;
-        for (size_t i = 0; i < nEdgeIdxElems; i++)
-        {
-            std::cout << edgeIdxData[i] << std::endl;
-            /* code */
         }
 
         // Allocate device memory for edges
