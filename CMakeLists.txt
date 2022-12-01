@@ -68,6 +68,13 @@ add_executable(cuda_opengl_app)
 # Pre setup
 set_target_properties(cuda_opengl_app PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
+target_compile_definitions(cuda_opengl_app
+    PUBLIC
+
+    # If the debug configuration pass the DEBUG define to the compiler
+    $<$<CONFIG:Debug>:-DDEBUG>>
+)
+
 target_compile_options(cuda_opengl_app PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:
     --expt-relaxed-constexpr
     >)
@@ -93,6 +100,7 @@ file(
     COPY ${CMAKE_CURRENT_SOURCE_DIR}/ASSETS/
     DESTINATION ${ASSETS_DIRECTORY}
 )
+
 target_compile_definitions(
     cuda_opengl_app
 

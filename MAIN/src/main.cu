@@ -37,6 +37,18 @@
 
 static constexpr char *kAssetDirectory = XSTR(ASSETS_DIRECTORY);
 
+template <typename T>
+std::vector<T> deviceToContainer(T *d_ptr, size_t nElems)
+{
+    std::vector<T> result(nElems);
+
+    cutilSafeCall(cudaMemcpy(result.data(),
+                             d_ptr,
+                             nElems * sizeof(T),
+                             cudaMemcpyDeviceToHost));
+    return result;
+}
+
 void ImGuiHelloWorld(bool showDemoWindow, ImVec4 &clearColor)
 {
     static float f = 0.0f;
@@ -226,28 +238,49 @@ int main(int argv, char **args)
         0,
     };
 
-    PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
-    initPlaneVAO(gridPlane);
+    // PlaneGLData gridPlane(&gridPlaneVertexData, &monoColourShader);
+    // initPlaneVAO(gridPlane);
 
     CuGlGeometry gridPlaneCu(&gridPlaneVertexData, &monoColourShader);
 
     CuGlBufferSetter<float> vertexBufferSetter;
     CuGlBufferSetter<uint, GL_ELEMENT_ARRAY_BUFFER> indexBufferSetter;
 
-    std::vector<std::pair<std::string, Geometry *>> nameToGeometry =
-        initGeometryFromAiMeshes<Geometry>(meshes, vertexBufferSetter, {},
-                                           indexBufferSetter);
+    std::vector<std::pair<std::string, PBDGeometry *>> nameToGeometry =
+        initGeometryFromAiMeshes<PBDGeometry>(meshes, vertexBufferSetter, {},
+                                              indexBufferSetter);
 
-    Geometry &cudaPanther = *(nameToGeometry[0].second);
+    PBDGeometry &cudaCube = *(nameToGeometry[0].second);
 
-    GeometryViewer patherViewer{};
+    std::vector<uint> fixedVertices{0};
 
-    initGeometryViewer(patherViewer,
+    initializePBDParameters(cudaCube, fixedVertices.data(),
+                            static_cast<uint>(fixedVertices.size()));
+
+    // clang-format off
+    const auto &mapAndSyncCuGlBuffers = [&]()
+    {
+        vertexBufferSetter.mapAndSync(&cudaCube.d_vertexPositionBufferData);
+        indexBufferSetter.mapAndSync(&cudaCube.d_edgeIdxBufferData);
+    };
+
+    const auto &unMapCuGlBuffers = [&]()
+    {
+        vertexBufferSetter.unMap();
+        indexBufferSetter.unMap();
+    };
+    // clang-format on
+
+    GeometryViewer cubeViewer{};
+
+    initGeometryViewer(cubeViewer,
                        vertexBufferSetter.m_nElements,
                        vertexBufferSetter.m_glBufferId,
                        indexBufferSetter.m_nElements,
                        indexBufferSetter.m_glBufferId,
                        &monoColourShader);
+
+    WorldProperties props;
 
     //=====================================MAIN LOOP===============================================
     int frame = 0;
@@ -304,34 +337,68 @@ int main(int argv, char **args)
 
             ImGuiHelloWorld(showDemoWindow, clearColor);
 
+            //{
+            //
+            //    bool show_another_window = true;
+            //    ImGui::Begin("Grid Translation", &show_another_window);
+            //    ImGui::InputFloat3("input float3", cubeGridTranslate);
+            //    ImGui::SameLine();
+            //    if (ImGui::Button("Translate"))
+            //        translateGeom(gridPlaneCu,
+            //                      {cubeGridTranslate[0],
+            //                       cubeGridTranslate[1],
+            //                       cubeGridTranslate[2]});
+            //    ImGui::End();
+            //}
+
             {
 
                 bool show_another_window = true;
-                ImGui::Begin("Grid Translation", &show_another_window);
+                ImGui::Begin("Cube Translation", &show_another_window);
                 ImGui::InputFloat3("input float3", cubeGridTranslate);
                 ImGui::SameLine();
                 if (ImGui::Button("Translate"))
-                    translateGeom(gridPlaneCu,
-                                  {cubeGridTranslate[0], cubeGridTranslate[1],
-                                   cubeGridTranslate[2]});
+                {
+                    ei::Vector3f translation = {cubeGridTranslate[0],
+                                                cubeGridTranslate[1],
+                                                cubeGridTranslate[2]};
+                    std::cout << translation << std::endl;
+
+                    mapAndSyncCuGlBuffers();
+                    translateGeom(cudaCube, translation);
+                    unMapCuGlBuffers();
+                }
                 ImGui::End();
             }
 
             ImGui::Render();
 
+            // Camera update
             updateCamera(camera);
-            // ei::Matrix4f cameraVP = camera.projMat.transpose() *
-            // camera.viewMat.transpose();
             ei::Matrix4f cameraVP = camera.projMat * camera.viewMat;
-            // cameraVP.transpose();
-            // std::cout<<cameraVP<<std::endl;
+
+            mapAndSyncCuGlBuffers();
+
+            std::vector<float> positionsPreTranslate = deviceToContainer(
+                cudaCube.d_vertexPositionBufferData,
+                cudaCube.d_nVertexPositionBufferElems);
+
+            std::cout << positionsPreTranslate << std::endl;
+            applyExternalForces(cudaCube, props);
+            runPBDSolver(cudaCube);
+
+            unMapCuGlBuffers();
+            std::vector<float> positionsPostTranslate = deviceToContainer(
+                cudaCube.d_vertexPositionBufferData,
+                cudaCube.d_nVertexPositionBufferElems);
+            std::cout << positionsPostTranslate << std::endl;
 
             // Draw geometry
             // updatePlaneVBO(gridPlane);
             // drawPlane(gridPlane, cameraVP);
             checkGLError();
 
-            drawGeometryViewer(patherViewer, cameraVP);
+            drawGeometryViewer(cubeViewer, cameraVP);
             checkGLError();
 
             drawGeom(gridPlaneCu, cameraVP);

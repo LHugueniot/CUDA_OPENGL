@@ -68,6 +68,24 @@ struct CuGlBufferSetter
         checkGLError();
     }
 
+    void mapAndSync(T **devPtr)
+    {
+        // Map buffer object
+        cutilSafeCall(cudaGraphicsMapResources(1, &m_resourceObj, 0));
+
+        size_t size;
+        // Get pointer to use, not sure if possible to use outside of mapped scope
+        cutilSafeCall(cudaGraphicsResourceGetMappedPointer(
+            reinterpret_cast<void **>(devPtr), &size, m_resourceObj));
+        std::cout << "size: " << size << std::endl;
+    }
+
+    void unMap()
+    {
+        // Map buffer object
+        cutilSafeCall(cudaGraphicsUnmapResources(1, &m_resourceObj, 0));
+    }
+
     std::vector<T> m_data = {};
 
     GLuint m_glBufferId = 0;
@@ -94,7 +112,7 @@ struct DefaultCudaBufferSetter
         memcpy(&m_data.data()[0], data, bufferSize);
         cutilSafeCall(cudaMemcpy(devPtr, data, bufferSize, cudaMemcpyHostToDevice));
     }
-    std::vector<T> m_data;
+    std::vector<T> m_data = {};
 };
 
 std::vector<const aiMesh *>

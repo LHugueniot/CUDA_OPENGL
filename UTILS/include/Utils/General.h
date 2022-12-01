@@ -2,11 +2,15 @@
 #define UTIL_GENERAL_H
 
 #include <algorithm>
+#include <bitset>
+#include <cstddef>
 #include <iostream>
+#include <limits.h>
 #include <list>
 #include <map>
 #include <set>
 #include <vector>
+#include<stdio.h>
 
 //#ifndef __cplusplus < 201703L
 // namespace std {
@@ -18,9 +22,17 @@
 //}
 //#endif
 
+// Type Defines
+
+using std::byte;
+
 #ifndef uint
 using uint = unsigned int;
 #endif
+
+#define BYTE_BITS 8
+
+// Useful macros
 
 #define ASSERT_WITH_MESSAGE(condition, message) \
     do                                          \
@@ -33,6 +45,8 @@ using uint = unsigned int;
     } while (false)
 
 #define WARNING_MSG(msg) printf("BREAK POINT - FILE %s - LINE %i : %s\n", __FILE__, __LINE__, msg)
+
+// Std container print outs
 
 template <typename T>
 void printStdVecInStride(std::vector<T> &vec, uint stride = 3)

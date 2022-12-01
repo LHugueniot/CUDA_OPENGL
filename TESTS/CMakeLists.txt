@@ -15,6 +15,13 @@ target_compile_options(
     --expt-relaxed-constexpr
     >)
 
+target_compile_definitions(cuda_opengl_tests_main
+    PUBLIC
+
+    # If the debug configuration pass the DEBUG define to the compiler
+    $<$<CONFIG:Debug>:-DDEBUG>>
+)
+
 set_target_properties(cuda_opengl_tests_main PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # Asset setup

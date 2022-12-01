@@ -15,7 +15,7 @@ __global__ void calculateEdgeLengths(float *vertexPositionBufferData,
                                      uint nVertexPositionBufferElems,
                                      uint *edgeIdxBufferData,
                                      uint nEdgeIdxBufferElems,
-                                     float *distanceConstraintLengthBufferData)
+                                     float *dcRestLengthBufferData)
 {
     uint threadFlatIdx = blockIdx.x * blockDim.x + threadIdx.x;
     // Get the index range we're operating on (i.e first and second vertex indices)
@@ -23,24 +23,35 @@ __global__ void calculateEdgeLengths(float *vertexPositionBufferData,
     uint edgeEndIdx = edgeStartIdx + 1;
 
     if (!(edgeEndIdx < nEdgeIdxBufferElems))
+    {
+        dcRestLengthBufferData[threadFlatIdx] = FLT_MAX;
         return;
+    }
 
     uint vert1StartIdx = edgeIdxBufferData[edgeStartIdx] * 3;
-    uint vert1EndIdx = vert1StartIdx + 2;
-
     uint vert2StartIdx = edgeIdxBufferData[edgeEndIdx] * 3;
+
+#ifdef DEBUG
+    uint vert1EndIdx = vert1StartIdx + 2;
     uint vert2EndIdx = vert2StartIdx + 2;
 
     if (!(vert1EndIdx < nVertexPositionBufferElems) ||
         !(vert2EndIdx < nVertexPositionBufferElems))
         return;
+#endif
 
     ei::Map<ei::Vector3f> vert1(&vertexPositionBufferData[vert1StartIdx]);
     ei::Map<ei::Vector3f> vert2(&vertexPositionBufferData[vert2StartIdx]);
 
-    ei::Vector3f diff = (vert2 - vert1);
+    ei::Vector3f diff = vert1 - vert2;
 
-    distanceConstraintLengthBufferData[threadFlatIdx] = diff.norm();
+    float restLength = 0;
+    if (vert1 == vert2)
+        restLength = FLT_MAX;
+    else
+        restLength = diff.norm();
+
+    dcRestLengthBufferData[threadFlatIdx] = restLength;
 }
 
 bool initializePBDParameters(PBDGeometry &g,
@@ -55,6 +66,25 @@ bool initializePBDParameters(PBDGeometry &g,
         return false;
     }
 
+    // Default init to 0
+    uint nIsVertexFixedElems = g.d_nVertexPositionBufferElems / (3 * BYTE_BITS);
+
+    std::vector<byte> isVertexFixed(nIsVertexFixedElems, byte(0));
+    for (uint i = 0; i < nFixedVertexIdxsElems; i++)
+    {
+        uint vertexIdx = fixedVertexIdxs[i];
+        setBoolFromPackedBuffer(isVertexFixed.data(), isVertexFixed.size(), vertexIdx, true);
+    }
+    pd.d_nIsVertexFixedBufferElems = nIsVertexFixedElems;
+    // redundant ik but consistent
+    size_t isVertexFixedBufferSize = nIsVertexFixedElems * sizeof(byte);
+    cutilSafeCall(cudaMalloc(&pd.d_isVertexFixedBuffer,
+                             isVertexFixedBufferSize));
+    cutilSafeCall(cudaMemcpy(pd.d_isVertexFixedBuffer,
+                             &isVertexFixed.data()[0],
+                             isVertexFixedBufferSize,
+                             cudaMemcpyDefault));
+
     // Initialize the fixed vertices data
     pd.d_nFixedVertexIdxBufferElems = nFixedVertexIdxsElems;
     size_t fixedVertexIdxsSize = pd.d_nFixedVertexIdxBufferElems * sizeof(uint);
@@ -68,20 +98,20 @@ bool initializePBDParameters(PBDGeometry &g,
     // Initialize the distance contraint length data
     assert(g.d_nEdgeIdxBufferElems % 2 == 0);
 
-    pd.d_nDistanceConstraintLengthBufferElems =
-        static_cast<uint>(g.d_nEdgeIdxBufferElems / 2);
-
-    size_t distanceConstraintLengthBufferSize = pd.d_nDistanceConstraintLengthBufferElems * sizeof(float);
-    cudaMalloc(&pd.d_distanceConstraintLengthBufferData,
-               distanceConstraintLengthBufferSize);
-
-    uint nEdges = static_cast<uint>(g.d_nEdgeIdxBufferElems / 2);
-
-    calculateEdgeLengths<<<1, nEdges>>>(g.d_vertexPositionBufferData,
-                                        g.d_nVertexPositionBufferElems,
-                                        g.d_edgeIdxBufferData,
-                                        g.d_nEdgeIdxBufferElems,
-                                        pd.d_distanceConstraintLengthBufferData);
+    // pd.d_nDcRestLengthBufferElems =
+    //     static_cast<uint>(g.d_nEdgeIdxBufferElems / 2);
+    //
+    // size_t dcRestLengthBufferSize = pd.d_nDcRestLengthBufferElems * sizeof(float);
+    // cudaMalloc(&pd.d_dcRestLengthBufferData,
+    //           dcRestLengthBufferSize);
+    //
+    // uint nEdges = static_cast<uint>(g.d_nEdgeIdxBufferElems / 2);
+    //
+    // calculateEdgeLengths<<<1, nEdges>>>(g.d_vertexPositionBufferData,
+    //                                    g.d_nVertexPositionBufferElems,
+    //                                    g.d_edgeIdxBufferData,
+    //                                    g.d_nEdgeIdxBufferElems,
+    //                                    pd.d_dcRestLengthBufferData);
 
     //
     pd.d_nDistanceConstraintsIdxBufferElems = g.d_nEdgeIdxBufferElems;
@@ -174,47 +204,77 @@ bool initializePBDParameters(PBDGeometry &g,
 
     pd.d_nDistanceConstraintSets = colorSets.size();
 
-    size_t nDistanceConstraintsPerSetSize = pd.d_nDistanceConstraintSets * sizeof(uint);
+    size_t nDistanceConstraintSetsSize = pd.d_nDistanceConstraintSets * sizeof(uint);
 
     cutilSafeCall(cudaMalloc(&pd.d_nDistanceConstraintsPerSet,
-                             nDistanceConstraintsPerSetSize));
+                             nDistanceConstraintSetsSize));
+    cutilSafeCall(cudaMalloc(&pd.d_nDcRestLengthPerSet,
+                             nDistanceConstraintSetsSize));
 
-    size_t nDistanceConstraintSets = pd.d_nDistanceConstraintSets * sizeof(uint *);
+    size_t distanceConstraintSetsSize = pd.d_nDistanceConstraintSets * sizeof(uint *);
+    uint **h_distanceConstraintSets = static_cast<uint **>(malloc(distanceConstraintSetsSize));
 
-    uint **h_distanceConstraintSets = static_cast<uint **>(malloc(nDistanceConstraintSets));
+    size_t dcRestLengthSetsSize = pd.d_nDistanceConstraintSets * sizeof(float *);
+    float **h_dcRestLengthSets = static_cast<float **>(malloc(dcRestLengthSetsSize));
 
     cutilSafeCall(cudaMalloc(&pd.d_distanceConstraintSets,
-                             nDistanceConstraintSets));
+                             distanceConstraintSetsSize));
+    cutilSafeCall(cudaMalloc(&pd.d_dcRestLengthSets,
+                             dcRestLengthSetsSize));
 
     for (size_t i = 0; i < colorSets.size(); i++)
     {
         auto &colorSet = colorSets[i];
-        uint colorSetSize = static_cast<uint>(colorSet.size()) * 2;
+
+        uint nColorSetElems = static_cast<uint>(colorSet.size()) * 2;
         cutilSafeCall(cudaMemcpy(&pd.d_nDistanceConstraintsPerSet[i],
-                                 &colorSetSize,
+                                 &nColorSetElems,
+                                 sizeof(uint),
+                                 cudaMemcpyHostToDevice));
+
+        uint nRestLengthSetElems = static_cast<uint>(colorSet.size());
+        cutilSafeCall(cudaMemcpy(&pd.d_nDcRestLengthPerSet[i],
+                                 &nRestLengthSetElems,
                                  sizeof(uint),
                                  cudaMemcpyHostToDevice));
 
         std::vector<uint> colorSetVector;
-        colorSetVector.reserve(colorSet.size() * 2);
+        colorSetVector.reserve(nColorSetElems);
         for (const auto &edge : colorSet)
         {
             colorSetVector.push_back(edge.first);
             colorSetVector.push_back(edge.second);
         }
 
-        size_t distanceConstraintSetSize = colorSetVector.size() * sizeof(uint);
+        uint nDistanceContraintSetElems = colorSetVector.size();
+        size_t distanceConstraintSetSize = nDistanceContraintSetElems * sizeof(uint);
         cutilSafeCall(cudaMalloc(&h_distanceConstraintSets[i],
                                  distanceConstraintSetSize));
-
         cutilSafeCall(cudaMemcpy(h_distanceConstraintSets[i],
                                  colorSetVector.data(),
                                  distanceConstraintSetSize,
                                  cudaMemcpyHostToDevice));
+
+        size_t dcRestLengthSetSize = colorSet.size() * sizeof(float);
+        cutilSafeCall(cudaMalloc(&h_dcRestLengthSets[i],
+                                 dcRestLengthSetSize));
+
+        calculateEdgeLengths<<<1, nRestLengthSetElems>>>(g.d_vertexPositionBufferData,
+                                                         g.d_nVertexPositionBufferElems,
+                                                         h_distanceConstraintSets[i],
+                                                         nDistanceContraintSetElems,
+                                                         h_dcRestLengthSets[i]);
+
+        if (nDistanceContraintSetElems > pd.d_maxNDistanceConstraintsInSet)
+            pd.d_maxNDistanceConstraintsInSet = nDistanceContraintSetElems;
     }
     cutilSafeCall(cudaMemcpy(pd.d_distanceConstraintSets,
                              h_distanceConstraintSets,
-                             nDistanceConstraintSets,
+                             distanceConstraintSetsSize,
+                             cudaMemcpyHostToDevice));
+    cutilSafeCall(cudaMemcpy(pd.d_dcRestLengthSets,
+                             h_dcRestLengthSets,
+                             dcRestLengthSetsSize,
                              cudaMemcpyHostToDevice));
 
     // Vertex velocities
@@ -241,70 +301,79 @@ __device__ std::pair<uint, uint> getVertexPosIdxRange(uint vPosIdx)
     return {vPosIdx * 3, vPosIdx * 3 + 2};
 }
 
-__device__ void pbdIteration(PBDGeometry &g, uint nIterations, uint dcIdx1, uint dcIdx2)
+__device__ void pbdIteration(PBDGeometry &g, uint nIterations, uint vIdx1, uint vIdx2, float dcRestLength)
 {
     auto &pd = g.pbdData;
 
     auto &vPosBuff = g.d_vertexPositionBufferData;
     auto &distConstraintsIdxBuff = pd.d_distanceConstraintsIdxBufferData;
     auto &vMassesBuff = pd.d_vertexMassesBufferData;
-    auto &restLengthBuff = pd.d_distanceConstraintLengthBufferData;
+    float **&dcRestLengthSets = pd.d_dcRestLengthSets;
 
     uint nVertices = static_cast<uint>(g.d_nVertexPositionBufferElems / 3);
 
-    uint vIdx1 = distConstraintsIdxBuff[dcIdx1];
-    uint vIdx2 = distConstraintsIdxBuff[dcIdx2];
+    if (!(vIdx1 < nVertices) ||
+        !(vIdx2 < nVertices))
+    {
+        printf("Index out of range:\nvIdx1: %i\nvIdx2: %i\n", vIdx1, vIdx2);
+        return;
+    }
 
-#ifdef DEBUG
+    bool isV1Fixed = getBoolFromPackedBuffer(pd.d_isVertexFixedBuffer,
+                                             pd.d_nIsVertexFixedBufferElems,
+                                             vIdx1);
+    bool isV2Fixed = getBoolFromPackedBuffer(pd.d_isVertexFixedBuffer,
+                                             pd.d_nIsVertexFixedBufferElems,
+                                             vIdx2);
+
+    if (isV1Fixed && isV2Fixed)
+    {
+        printf("Both vertices are fixed: vIdx1=%i, vIdx2=%i\n",
+               vIdx1, vIdx2);
+        return;
+    }
+
     auto [vPosIdx1Start, vPosIdx1End] = getVertexPosIdxRange(vIdx1);
     auto [vPosIdx2Start, vPosIdx2End] = getVertexPosIdxRange(vIdx2);
 
     if (!(vPosIdx1End < g.d_nVertexPositionBufferElems) ||
         !(vPosIdx2End < g.d_nVertexPositionBufferElems))
+    {
+        printf("Index out of range:\nvPosIdx1End: %i\nvPosIdx2End: %i\n", vPosIdx1End, vPosIdx2End);
         return;
-#else
-    auto vPosIdx1Start = vIdx1 * 3;
-    auto vPosIdx2Start = vIdx2 * 3;
-#endif
+    }
 
     ei::Map<ei::Vector3f> vPos1(&vPosBuff[vPosIdx1Start]);
-    ei::Map<ei::Vector3f> vPos2(&vPosBuff[vPosIdx1Start]);
+    ei::Map<ei::Vector3f> vPos2(&vPosBuff[vPosIdx2Start]);
 
     ei::Vector3f diff = vPos1 - vPos2;
     float dist = diff.norm();
 
-#ifdef DEBUG
-    if (!(vIdx1 < nVertices) ||
-        !(vIdx1 < nVertices))
-        return;
-#endif
-
     float &w1 = vMassesBuff[vIdx1];
     float &w2 = vMassesBuff[vIdx2];
 
-    float invW1 = w1 ? 1.f / w1 : FLT_MAX;
-    float invW2 = w2 ? 1.f / w2 : FLT_MAX;
+    float invW1 = w1 != 0 ? (isV1Fixed ? 0 : 1.f / w1) : FLT_MAX;
+    float invW2 = w2 != 0 ? (isV2Fixed ? 0 : 1.f / w2) : FLT_MAX;
 
     float W = (invW1 == FLT_MAX || invW2 == FLT_MAX) ? FLT_MAX : invW1 + invW2;
 
+    // printf("W %f, dist %f\n", W, dist);
     if (W <= 0 || dist <= 0)
     {
         return;
     }
 
-    float kPrime = 1.f - std::pow(1.0f - 0.5f, 1.f / static_cast<float>(nIterations));
-
-    // TODO figure out how to get the rest length
-    float restLength = restLengthBuff[0];
-
-    vPos1 += (-(invW1 / W) *
-              (dist - restLength) *
-              (diff / dist)) *
+    float kPrime = 1.f - std::pow(0.5f, 1.f / static_cast<float>(nIterations));
+    // printf("Setting pos for vertex at idx: %i\n", vIdx1);
+    vPos1 += -(invW1 / W) *
+             (dist - dcRestLength) *
+             (diff.normalized()) *
              kPrime;
 
-    vPos2 += (-(invW2 / W) *
-              (dist - restLength) *
-              (diff / dist)) *
+    // printf("Setting pos for vertex at idx: %i\n", vIdx2);
+    vPos2 += (invW2 / W) *
+             (dist - dcRestLength) *
+             (diff.normalized()) *
              kPrime;
 }
 
@@ -314,31 +383,75 @@ __global__ void pbdStep(PBDGeometry g, uint nIterations)
 
     uint threadFlatIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    for (uint i; i < pd.d_nDistanceConstraintSets; i++)
-    {
-        uint startIdx = threadFlatIdx * 2;
-        uint endIdx = startIdx + 1;
+    uint startIdx = threadFlatIdx * 2;
+    uint endIdx = startIdx + 1;
 
+    // printf("n Distance constraint sets, %i for thread %i\n", pd.d_nDistanceConstraintSets, threadFlatIdx);
+    for (uint i = 0; i < pd.d_nDistanceConstraintSets; i++)
+    {
+#ifdef DEBUG
+        printf("in debug mode");
+#endif
+
+        // printf("N distance constraints in set %i\n", pd.d_nDistanceConstraintsPerSet[i]);
         if (pd.d_nDistanceConstraintsPerSet[i] < endIdx)
         {
+            // printf("continuing for thread %i\n", threadFlatIdx);
             continue;
         }
 
-        auto &distanceConstraints = pd.d_distanceConstraintSets[i];
+        auto &distanceConstraintSet = pd.d_distanceConstraintSets[i];
+        auto &dcRestLengths = pd.d_dcRestLengthSets[i];
 
-        uint dcIdx1 = distanceConstraints[startIdx];
-        uint dcIdx2 = distanceConstraints[endIdx];
+        uint vIdx1 = distanceConstraintSet[startIdx];
+        uint vIdx2 = distanceConstraintSet[endIdx];
+
+        float dcRestLength = dcRestLengths[threadFlatIdx];
 
         for (uint k = 0; k < nIterations; k++)
         {
-            pbdIteration(g, nIterations, dcIdx1, dcIdx2);
+            pbdIteration(g, nIterations, vIdx1, vIdx2, dcRestLength);
         }
     }
 }
 
-void runPBDSolver(PBDGeometry &g,
-                  WorldProperties &worldProperties)
+// void runPBDSolver(PBDGeometry &g,
+//                   WorldProperties &worldProperties)
+void runPBDSolver(PBDGeometry &g)
 {
-    uint nWarps = 1;
+    auto &pd = g.pbdData;
+    uint nWarps = static_cast<uint>(pd.d_maxNDistanceConstraintsInSet / 2);
     pbdStep<<<1, nWarps>>>(g, 10);
+}
+
+__global__ void applyGravity(PBDGeometry g, WorldProperties wp)
+{
+    uint threadFlatIdx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    uint vertexIdx = threadFlatIdx;
+
+    bool isFixedVerted = getBoolFromPackedBuffer(g.pbdData.d_isVertexFixedBuffer, g.d_nVertexPositionBufferElems / 3, vertexIdx);
+
+    if (isFixedVerted)
+    {
+        printf("applyGravity - vertex index out of range: %i\n", vertexIdx);
+        return;
+    }
+
+    uint startIdx = threadFlatIdx * 3;
+    uint endIdx = startIdx + 2;
+
+    if (!(endIdx < g.d_nVertexPositionBufferElems))
+    {
+        printf("applyGravity - vertex index out of range: %i\n", startIdx);
+        return;
+    }
+
+    ei::Map<ei::Vector3f> vertex(&g.d_vertexPositionBufferData[startIdx]);
+    vertex += wp.m_gravConstant * wp.m_timeStep;
+}
+
+void applyExternalForces(PBDGeometry &g, WorldProperties &wp)
+{
+    applyGravity<<<1, (g.d_nVertexPositionBufferElems / 3)>>>(g, wp);
 }

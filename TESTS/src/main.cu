@@ -77,6 +77,9 @@ std::vector<T> deviceToContainer(T *d_ptr, size_t nElems)
 {
     std::vector<T> result(nElems);
 
+    assert(d_ptr != nullptr);
+    assert(result.data() != nullptr);
+
     cutilSafeCall(cudaMemcpy(result.data(),
                              d_ptr,
                              nElems * sizeof(T),
@@ -457,6 +460,12 @@ TEST(Geometry, LoadGeometry)
 
     Geometry &g = *gPtr;
 
+    std::vector<float> vertexBuffer = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    ASSERT_EQ(vertexBuffer.size(), 8 * 3);
+
     std::vector<uint> edgeIndices = deviceToContainer(
         g.d_edgeIdxBufferData,
         g.d_nEdgeIdxBufferElems);
@@ -476,7 +485,9 @@ TEST(Geometry, LoadGeometry)
     aiReleaseImport(sceneCache);
 }
 
-TEST(PBDGeometry, initializePBDParameters)
+using NameToPBDGeomPtr = std::vector<std::pair<std::string, PBDGeometry *>>;
+
+std::pair<PBDGeometry *, NameToPBDGeomPtr> pbdGeomSetup()
 {
     const aiScene *sceneCache = nullptr;
 
@@ -485,51 +496,50 @@ TEST(PBDGeometry, initializePBDParameters)
 
     std::vector<const aiMesh *> meshes = loadAiMeshes(assetFile, &sceneCache);
 
-    DefaultCudaBufferSetter<uint> edgeSetter;
-    std::vector<std::pair<std::string, PBDGeometry *>> nameToGeometry =
-        initGeometryFromAiMeshes<PBDGeometry>(meshes, {}, edgeSetter, {});
+    NameToPBDGeomPtr nameToGeometry = initGeometryFromAiMeshes<PBDGeometry>(meshes);
 
     // std::cout << edgeSetter.m_data << std::endl;
 
-    PBDGeometry *cubeGeom;
+    PBDGeometry *cubeGeom = nullptr;
     for (auto &[name, geomPtr] : nameToGeometry)
         if (name == "Cube")
             cubeGeom = geomPtr;
 
-    ASSERT_NE(cubeGeom, nullptr);
+    return {cubeGeom, nameToGeometry};
+}
 
-    uint *h_edgeIdxBufferData = new uint[cubeGeom->d_nEdgeIdxBufferElems];
-    cutilSafeCall(cudaMemcpy(h_edgeIdxBufferData,
-                             cubeGeom->d_edgeIdxBufferData,
-                             cubeGeom->d_nEdgeIdxBufferElems * sizeof(uint),
-                             cudaMemcpyDeviceToHost));
-
-    // for (uint i = 0; i < cubeGeom->d_nEdgeIdxBufferElems; i++)
-    // {
-    //     std::cout << h_edgeIdxBufferData[i] << std::endl;
-    // }
-
+TEST(PBDGeometry, initializePBDParameters)
+{
     uint fixedVertexIdx = 0;
     uint nFixedVertexIdx = 1;
-    auto &g = *cubeGeom;
+    auto [gPtr, nameToGeometry] = pbdGeomSetup();
+
+    ASSERT_NE(gPtr, nullptr);
+    auto &g = *gPtr;
+
     auto &p = g.pbdData;
+
     initializePBDParameters(g, &fixedVertexIdx, nFixedVertexIdx);
 
-    ASSERT_EQ(p.d_nFixedVertexIdxBufferElems, 1);
+    std::vector<byte> isVertexFixedBuffer = deviceToContainer(
+        p.d_isVertexFixedBuffer,
+        p.d_nIsVertexFixedBufferElems);
+
+    ASSERT_EQ(p.d_nIsVertexFixedBufferElems, 1);
+
+    std::vector<byte> expectedIsVertexFixedBuffer{
+        byte(1)};
+
+    ASSERT_EQ(isVertexFixedBuffer.size(), 1);
+
+    ASSERT_EQ(isVertexFixedBuffer, expectedIsVertexFixedBuffer);
 
     std::vector<uint> fixedVertexIdxBufferData = deviceToContainer(
         p.d_fixedVertexIdxBufferData,
         p.d_nFixedVertexIdxBufferElems);
 
+    ASSERT_EQ(p.d_nFixedVertexIdxBufferElems, 1);
     ASSERT_EQ(fixedVertexIdxBufferData.size(), 1);
-    ASSERT_EQ(fixedVertexIdxBufferData[0], 0);
-
-    std::vector<float> distanceConstraintLengths = deviceToContainer(
-        p.d_distanceConstraintLengthBufferData,
-        p.d_nDistanceConstraintLengthBufferElems);
-    std::vector<float> expectedDistanceConstraintLengths;
-
-    ASSERT_EQ(distanceConstraintLengths.size(), 18);
 
     std::vector<float> vertexPositions = deviceToContainer(
         g.d_vertexPositionBufferData,
@@ -553,44 +563,51 @@ TEST(PBDGeometry, initializePBDParameters)
     ASSERT_EQ(edgeIndices.size(), 18 * 2);
     ASSERT_EQ(vertexPositions.size() % 6, 0);
 
-    for (size_t i = 0; i < edgeIndices.size(); i += 2)
-    {
-        uint idx1 = edgeIndices[i] * 3;
-        uint idx2 = edgeIndices[i + 1] * 3;
-
-        auto v1 = getVector3fs(vertexPositions, idx1);
-        auto v2 = getVector3fs(vertexPositions, idx2);
-
-        auto diff = v2 - v1;
-
-        expectedDistanceConstraintLengths.push_back(length(diff));
-    }
-
-    ASSERT_EQ(distanceConstraintLengths, expectedDistanceConstraintLengths);
-
     std::vector<uint> distanceConstraintsIndices = deviceToContainer(
         p.d_distanceConstraintsIdxBufferData,
         p.d_nDistanceConstraintsIdxBufferElems);
 
     ASSERT_EQ(distanceConstraintsIndices, edgeIndices);
 
+    // Check max num distance constraints
+    ASSERT_EQ(p.d_maxNDistanceConstraintsInSet, 8);
+
+    // Distance constraint sets
     std::vector<std::vector<uint>> distanceConstraintSets;
     std::vector<uint *> distanceConstraintSetsDevicePtrs = deviceToContainer(
         p.d_distanceConstraintSets,
         p.d_nDistanceConstraintSets);
-
     std::vector<uint> nDistanceConstraintsPerSet = deviceToContainer(
         p.d_nDistanceConstraintsPerSet,
         p.d_nDistanceConstraintSets);
 
-    for (size_t i = 0; i < nDistanceConstraintsPerSet.size(); i++)
+    // Dc rest length
+    std::vector<std::vector<float>> dcRestLengthSets;
+    std::vector<float *> dcRestLengthsSetsDevicePtrs = deviceToContainer(
+        p.d_dcRestLengthSets,
+        p.d_nDistanceConstraintSets);
+    std::vector<uint> nDcRestLengthPerSet = deviceToContainer(
+        p.d_nDcRestLengthPerSet,
+        p.d_nDistanceConstraintSets);
+
+    for (size_t i = 0; i < p.d_nDistanceConstraintSets; i++)
     {
         auto nDistanceConstraints = nDistanceConstraintsPerSet[i];
         distanceConstraintSets.push_back(
             deviceToContainer(
                 distanceConstraintSetsDevicePtrs[i],
                 nDistanceConstraints));
+
+        auto nDcRestLengths = nDcRestLengthPerSet[i];
+        ASSERT_EQ(nDcRestLengths, nDistanceConstraints / 2);
+
+        dcRestLengthSets.push_back(
+            deviceToContainer(
+                dcRestLengthsSetsDevicePtrs[i],
+                nDcRestLengths));
     }
+
+    std::cout << distanceConstraintSets << std::endl;
 
     // Assert there is maximum one reference to a vertex index in each set
     for (const auto &dcSet : distanceConstraintSets)
@@ -606,7 +623,34 @@ TEST(PBDGeometry, initializePBDParameters)
         }
     }
 
-    // std::cout << g.d_nVertexPositionBufferElems << std::endl;
+    std::vector<float> dcRestLengths;
+
+    for (const auto &dcRestLengthSet : dcRestLengthSets)
+    {
+        for (auto &&restLength : dcRestLengthSet)
+        {
+            dcRestLengths.push_back(restLength);
+        }
+    }
+
+    std::vector<float> expectedDcRestLengths;
+
+    for (const auto &dcSet : distanceConstraintSets)
+    {
+        for (size_t i = 0; i < dcSet.size(); i += 2)
+        {
+            uint vIdx1 = dcSet[i] * 3;
+            uint vIdx2 = dcSet[i + 1] * 3;
+
+            ei::Map<ei::Vector3f> vPos1(&vertexPositions[vIdx1]);
+            ei::Map<ei::Vector3f> vPos2(&vertexPositions[vIdx2]);
+            ei::Vector3f diff = vPos1 - vPos2;
+            float restLength = diff.norm();
+            expectedDcRestLengths.push_back(restLength);
+        }
+    }
+    ASSERT_EQ(dcRestLengths, expectedDcRestLengths);
+
     std::vector<float> vertexVelocitiesBuffer = deviceToContainer(
         p.d_vertexVelocitiesBufferData,
         g.d_nVertexPositionBufferElems);
@@ -627,6 +671,211 @@ TEST(PBDGeometry, initializePBDParameters)
     {
         ASSERT_EQ(e, 1.f);
     }
+}
+
+TEST(PBDGeometry, runPBDSolver_noExternalForces)
+{
+    auto [gPtr, nameToGeometry] = pbdGeomSetup();
+
+    ASSERT_NE(gPtr, nullptr);
+    auto &g = *gPtr;
+    auto &p = g.pbdData;
+
+    uint fixedVertexIdx = 0;
+    uint nFixedVertexIdx = 1;
+    initializePBDParameters(g, &fixedVertexIdx, nFixedVertexIdx);
+
+    std::vector<float> preSolverVertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    runPBDSolver(g);
+
+    std::vector<float> postSolverVertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    // Assert without any exterior forces that vertex positions haven't changed
+    ASSERT_EQ(preSolverVertexPositions, postSolverVertexPositions);
+}
+
+TEST(PBDGeometry, applyExternalForces)
+{
+    auto [gPtr, nameToGeometry] = pbdGeomSetup();
+
+    ASSERT_NE(gPtr, nullptr);
+    auto &g = *gPtr;
+    auto &p = g.pbdData;
+
+    uint fixedVertexIdx = 0;
+    uint nFixedVertexIdx = 1;
+    initializePBDParameters(g, &fixedVertexIdx, nFixedVertexIdx);
+
+    std::vector<float> expectedSolverVertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    WorldProperties wp;
+    // Start from the second vertex as we expect it to be fixed (fixedVertexIdx)
+    for (size_t i = 4; i < expectedSolverVertexPositions.size(); i += 3)
+    {
+        expectedSolverVertexPositions[i] += wp.m_gravConstant[1] * wp.m_timeStep;
+    }
+    applyExternalForces(g, wp);
+
+    ASSERT_NE(g.d_vertexPositionBufferData, nullptr);
+    // ei::Vector3f translation = {-10.f, -10.f, -10.f};
+    // translateGeom(g, translation);
+
+    std::vector<float> postExternalForcesVertexPositions(g.d_nVertexPositionBufferElems);
+
+    ASSERT_NE(g.d_vertexPositionBufferData, nullptr);
+    ASSERT_NE(postExternalForcesVertexPositions.data(), nullptr);
+
+    cutilSafeCall(cudaMemcpy(postExternalForcesVertexPositions.data(),
+                             g.d_vertexPositionBufferData,
+                             g.d_nVertexPositionBufferElems * sizeof(float),
+                             cudaMemcpyDeviceToHost));
+
+    // std::vector<float> postExternalForcesVertexPositions = deviceToContainer(
+    //     g.d_vertexPositionBufferData,
+    //     g.d_nVertexPositionBufferElems);
+
+    ASSERT_EQ(postExternalForcesVertexPositions[1], -1);
+    // Assert without any exterior forces that vertex positions haven't changed
+    ASSERT_EQ(expectedSolverVertexPositions, postExternalForcesVertexPositions);
+}
+
+//__global__ void testPrint()
+//{
+//    uint threadFlatIdx = blockIdx.x * blockDim.x + threadIdx.x;
+//
+//    printf("Printing from thread: %i\n", threadFlatIdx);
+//}
+//
+// TEST(InheritanceTest, childMemberAccess)
+//{
+//    struct A
+//    {
+//        int a = 0;
+//    };
+//
+//    struct B : A
+//    {
+//    };
+//    const auto childMemberAccessA = [](A &a)
+//    {
+//        ASSERT_EQ(a.a, 0);
+//    };
+//    const auto childMemberAccessB = [](B &b)
+//    {
+//        ASSERT_EQ(b.a, 1);
+//    };
+//    B b;
+//    b.a = 1;
+//
+//    childMemberAccessB(b);
+//    childMemberAccessA(b);
+//}
+//
+// TEST(TESTS_main_cu, testPrint)
+//{
+//    // testPrint<<<1, 100>>>();
+//}
+
+TEST(Sim, PackedBufferBools)
+{
+    std::vector<byte> boolBuffer(2, byte(0));
+    for (uint i = 0; i < BYTE_BITS * 2; i++)
+    {
+        ASSERT_EQ(getBoolFromPackedBuffer(boolBuffer.data(), boolBuffer.size(), i), false);
+    }
+
+    std::array<uint, 4> indices{0, 8, 12, 15};
+    for (auto idx : indices)
+    {
+        setBoolFromPackedBuffer(boolBuffer.data(), boolBuffer.size(), idx, true);
+    }
+    for (auto idx : indices)
+    {
+        ASSERT_EQ(getBoolFromPackedBuffer(boolBuffer.data(), boolBuffer.size(), idx), true);
+    }
+
+    // for (const auto &e : boolBuffer)
+    //{
+    //
+    //    std::cout << std::bitset<8>(static_cast<char>(e)) << ", ";
+    //}
+    // std::cout << std::endl;
+
+    for (uint i = 0; i < BYTE_BITS * 2; i++)
+    {
+        // Skip all the ones we've set
+        bool skip = false;
+        for (auto idx : indices)
+            if (i == idx)
+                skip = true;
+        if (skip)
+            continue;
+        ASSERT_EQ(getBoolFromPackedBuffer(boolBuffer.data(), boolBuffer.size(), i), false);
+    }
+}
+
+TEST(PBDGeometry, runPBDSolver_withExternalForces)
+{
+    auto [gPtr, nameToGeometry] = pbdGeomSetup();
+
+    ASSERT_NE(gPtr, nullptr);
+    auto &g = *gPtr;
+    auto &p = g.pbdData;
+    uint fixedVertexIdx = 0;
+    uint nFixedVertexIdx = 1;
+
+    initializePBDParameters(g, &fixedVertexIdx, nFixedVertexIdx);
+
+    std::vector<byte> isVertexFixedBuffer = deviceToContainer(
+        p.d_isVertexFixedBuffer,
+        p.d_nIsVertexFixedBufferElems);
+
+    // for (const auto &e : isVertexFixedBuffer)
+    //{
+    //
+    //    std::cout << std::bitset<8>(static_cast<char>(e)) << ", ";
+    //}
+    // std::cout << std::endl;
+
+    ASSERT_EQ(p.d_nIsVertexFixedBufferElems, 1);
+
+    std::vector<byte> expectedIsVertexFixedBuffer{
+        byte(1)};
+
+    ASSERT_EQ(isVertexFixedBuffer.size(), 1);
+
+    ASSERT_EQ(isVertexFixedBuffer, expectedIsVertexFixedBuffer);
+
+    std::vector<float> preSolverVertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    WorldProperties props;
+    applyExternalForces(g, props);
+
+    std::vector<float> postExternalForcesVertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    runPBDSolver(g);
+
+    std::vector<float> postSolverVertexPositions = deviceToContainer(
+        g.d_vertexPositionBufferData,
+        g.d_nVertexPositionBufferElems);
+
+    // Assert without any exterior forces that vertex positions haven't changed
+    ASSERT_NE(preSolverVertexPositions, postSolverVertexPositions);
+    ASSERT_NE(postExternalForcesVertexPositions, postSolverVertexPositions);
+
+    // std::cout << preSolverVertexPositions << std::endl;
+    // std::cout << postSolverVertexPositions << std::endl;
 }
 
 /*

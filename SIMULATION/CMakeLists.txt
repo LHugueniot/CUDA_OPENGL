@@ -14,7 +14,12 @@ target_include_directories(
     PUBLIC
     ${SIMULATION_INCLUDE}
 )
+target_compile_definitions(Sim
+    PRIVATE
 
+    # If the debug configuration pass the DEBUG define to the compiler
+    $<$<CONFIG:Debug>:-DDEBUG>>
+)
 target_link_libraries(
     Sim
 
