@@ -11,7 +11,7 @@ function(extract_macro_val MACRO_NAME HEADER_FILE)
     set(extract_macro_val_RETURN ${_macro_val} PARENT_SCOPE)
 endfunction()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 add_compile_definitions(_USE_MATH_DEFINES)
 
