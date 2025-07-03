@@ -13,21 +13,20 @@ loadAiMeshes(const std::filesystem::path &sceneFilePath,
                   << std::endl;
         throw std::exception(errStream.str().c_str());
     }
-    auto sceneCache = aiImportFile(sceneFilePath.u8string().c_str(), importFlags);
-
-    // Assimp::Importer importer;
-    // auto sceneCache = importer.ReadFile(sceneFilePath.string().c_str(),
-    // aiProcess_Triangulate);
-    *sceneCachePtr = sceneCache;
+    
+    auto sceneCache = aiImportFile(sceneFilePath.string().c_str(), importFlags);
 
     if (!sceneCache)
     {
         errStream << "Could not open file: " << sceneFilePath
                   << " Reason: " << aiGetErrorString() << std::endl;
-        // errStream<<"Could not open file: "<<sceneFilePath<<" Reason:
-        // "<<importer.GetErrorString()<<std::endl;
         throw std::exception(errStream.str().c_str());
     }
+
+    // Assimp::Importer importer;
+    // auto sceneCache = importer.ReadFile(sceneFilePath.string().c_str(),
+    // aiProcess_Triangulate);
+    *sceneCachePtr = sceneCache;
 
     std::vector<const aiMesh *> result;
 

@@ -2,7 +2,7 @@
 #include "Utils/ImGUI.h"
 #include "Utils/Mesh.h"
 
-#include "Geometry/CuGlBuffer.cuh"
+#include "Geometry/Buffer/CuGlBuffer_NEW.cuh"
 #include "Geometry/CuGlGeometry.cuh"
 #include "Geometry/Geometry.cuh"
 #include "Geometry/LoadGeometry.cuh"
@@ -14,6 +14,15 @@
 #include "Viewer/GeometryViewer.h"
 #include "Viewer/MonoColourGLShader.h"
 #include "Viewer/PlaneGLData.h"
+
+#include <easylogging++.h>
+INITIALIZE_EASYLOGGINGPP
+static el::Logger* logger = el::Loggers::getLogger("Main");
+
+#define STR(s) #s
+#define XSTR(s) STR(s)
+
+static constexpr char const *kAssetDirectory = XSTR(ASSETS_DIRECTORY);
 
 // struct CUDA_GL_state{
 //     int deviceCount;
@@ -32,10 +41,6 @@
 //     return state;
 // }
 
-#define STR(s) #s
-#define XSTR(s) STR(s)
-
-static constexpr char *kAssetDirectory = XSTR(ASSETS_DIRECTORY);
 
 template <typename T>
 std::vector<T> deviceToContainer(T *d_ptr, size_t nElems)
@@ -207,7 +212,8 @@ int main(int argv, char **args)
 
     std::filesystem::path assetDir = std::filesystem::absolute(kAssetDirectory);
     // std::filesystem::path assetFile = assetDir / "PantherBoss" / "PAN.obj";
-    std::filesystem::path assetFile = assetDir / "cube_simple.obj";
+    // std::filesystem::path assetFile = assetDir / "cube_simple.obj";
+    std::filesystem::path assetFile = assetDir / "grid_plane.obj";
 
     std::cout << assetFile << std::endl;
 
@@ -362,7 +368,7 @@ int main(int argv, char **args)
                     ei::Vector3f translation = {cubeGridTranslate[0],
                                                 cubeGridTranslate[1],
                                                 cubeGridTranslate[2]};
-                    std::cout << translation << std::endl;
+                    // std::cout << translation << std::endl;
 
                     mapAndSyncCuGlBuffers();
                     translateGeom(cudaCube, translation);
@@ -383,7 +389,7 @@ int main(int argv, char **args)
                 cudaCube.d_vertexPositionBufferData,
                 cudaCube.d_nVertexPositionBufferElems);
 
-            std::cout << positionsPreTranslate << std::endl;
+            //std::cout << positionsPreTranslate << std::endl;
             applyExternalForces(cudaCube, props);
             runPBDSolver(cudaCube);
 
@@ -391,7 +397,7 @@ int main(int argv, char **args)
             std::vector<float> positionsPostTranslate = deviceToContainer(
                 cudaCube.d_vertexPositionBufferData,
                 cudaCube.d_nVertexPositionBufferElems);
-            std::cout << positionsPostTranslate << std::endl;
+            //std::cout << positionsPostTranslate << std::endl;
 
             // Draw geometry
             // updatePlaneVBO(gridPlane);

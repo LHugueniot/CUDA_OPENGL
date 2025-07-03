@@ -521,14 +521,14 @@ TEST(PBDGeometry, initializePBDParameters)
 
     initializePBDParameters(g, &fixedVertexIdx, nFixedVertexIdx);
 
-    std::vector<byte> isVertexFixedBuffer = deviceToContainer(
+    std::vector<std::byte> isVertexFixedBuffer = deviceToContainer(
         p.d_isVertexFixedBuffer,
         p.d_nIsVertexFixedBufferElems);
 
     ASSERT_EQ(p.d_nIsVertexFixedBufferElems, 1);
 
-    std::vector<byte> expectedIsVertexFixedBuffer{
-        byte(1)};
+    std::vector<std::byte> expectedIsVertexFixedBuffer{
+        std::byte(1)};
 
     ASSERT_EQ(isVertexFixedBuffer.size(), 1);
 
@@ -846,8 +846,8 @@ TEST(PBDGeometry, runPBDSolver_withExternalForces)
 
     ASSERT_EQ(p.d_nIsVertexFixedBufferElems, 1);
 
-    std::vector<byte> expectedIsVertexFixedBuffer{
-        byte(1)};
+    std::vector<std::byte> expectedIsVertexFixedBuffer{
+        std::byte(1)};
 
     ASSERT_EQ(isVertexFixedBuffer.size(), 1);
 

@@ -9,6 +9,15 @@
 #pragma warning(disable : 4068)
 #endif
 
+// Very strange behaviour
+// #if defined(__CUDACC__)
+// #include <thrust/complex.h> // CUDA's own complex type
+// #else
+// #include <complex>
+// #endif
+#include <complex>
+using std::arg;
+
 #include <Eigen/Core>
 #include <Eigen/Eigen>
 #include <Eigen/Geometry>

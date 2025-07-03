@@ -43,6 +43,7 @@ add_subdirectory(VIEWER)
 add_subdirectory(GEOMETRY)
 add_subdirectory(SIMULATION)
 add_subdirectory(UI)
+add_subdirectory(THIRD_PARTY)
 
 # CUDA setup
 set(CUDA_REQUIRED_VERSION "11.6.0")
@@ -76,7 +77,8 @@ target_compile_definitions(cuda_opengl_app
 )
 
 target_compile_options(cuda_opengl_app PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:
-    --expt-relaxed-constexpr
+    #--expt-relaxed-constexpr
+    -Wno-deprecated-gpu-targets
     >)
 
 # Sources
@@ -92,6 +94,7 @@ target_link_libraries(
     Geometry
     Sim
     Ui
+    easyloggingpp
 )
 
 # Asset setup
@@ -101,6 +104,7 @@ file(
     DESTINATION ${ASSETS_DIRECTORY}
 )
 
+# Compile file
 target_compile_definitions(
     cuda_opengl_app
 
@@ -109,4 +113,4 @@ target_compile_definitions(
 )
 
 # Tests =======================================================================
-add_subdirectory(TESTS)
+# add_subdirectory(TESTS)

@@ -69,7 +69,7 @@ bool initializePBDParameters(PBDGeometry &g,
     // Default init to 0
     uint nIsVertexFixedElems = g.d_nVertexPositionBufferElems / (3 * BYTE_BITS);
 
-    std::vector<byte> isVertexFixed(nIsVertexFixedElems, byte(0));
+    std::vector<std::byte> isVertexFixed(nIsVertexFixedElems, std::byte(0));
     for (uint i = 0; i < nFixedVertexIdxsElems; i++)
     {
         uint vertexIdx = fixedVertexIdxs[i];
@@ -77,7 +77,7 @@ bool initializePBDParameters(PBDGeometry &g,
     }
     pd.d_nIsVertexFixedBufferElems = nIsVertexFixedElems;
     // redundant ik but consistent
-    size_t isVertexFixedBufferSize = nIsVertexFixedElems * sizeof(byte);
+    size_t isVertexFixedBufferSize = nIsVertexFixedElems * sizeof(std::byte);
     cutilSafeCall(cudaMalloc(&pd.d_isVertexFixedBuffer,
                              isVertexFixedBufferSize));
     cutilSafeCall(cudaMemcpy(pd.d_isVertexFixedBuffer,

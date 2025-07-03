@@ -6,7 +6,7 @@
 #include "Utils/Eigen.h"
 #include "Utils/General.h"
 
-#include "Geometry/CuGlBuffer.cuh"
+#include "Geometry/Buffer/CuGlBuffer_NEW.cuh"
 
 void __global__ setBufferVals(float setNum, float *d_bufferPtr, int bufferSize);
 

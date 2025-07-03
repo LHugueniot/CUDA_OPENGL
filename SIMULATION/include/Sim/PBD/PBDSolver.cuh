@@ -2,8 +2,6 @@
 #include "Utils/General.h"
 #include <cstddef>
 
-using std::byte;
-
 struct WorldProperties
 {
     ei::Vector3f m_gravConstant = {0.f, -9.8f, 0.f};
@@ -41,7 +39,7 @@ struct PBDGeometry : public Geometry
     struct PBDData
     {
         // A tightly packed buffer of booleans, packed as chars
-        byte *d_isVertexFixedBuffer = nullptr;
+        std::byte *d_isVertexFixedBuffer = nullptr;
         uint d_nIsVertexFixedBufferElems = 0;
 
         // Indices of fixed vertices
@@ -96,7 +94,7 @@ __host__ __device__ void setBoolFromPackedBuffer(T *buffer, uint nBufferElems, u
 
     uint bufferElemBitOffset = bufferIdx % typeSizeInBits;
     T &bufferElem = buffer[bufferElemIndex];
-    bufferElem |= byte(val << bufferElemBitOffset);
+    bufferElem |= std::byte(val << bufferElemBitOffset);
 }
 
 template <typename T>
@@ -115,5 +113,5 @@ __host__ __device__ bool getBoolFromPackedBuffer(T *buffer, uint nBufferElems, u
 
     uint bufferElemBitOffset = bufferIdx % typeSizeInBits;
     T &bufferElem = buffer[bufferElemIndex];
-    return bool(bufferElem & byte(1 << bufferElemBitOffset));
+    return bool(bufferElem & std::byte(1 << bufferElemBitOffset));
 }

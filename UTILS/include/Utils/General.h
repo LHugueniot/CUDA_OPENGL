@@ -24,8 +24,6 @@
 
 // Type Defines
 
-using std::byte;
-
 #ifndef uint
 using uint = unsigned int;
 #endif

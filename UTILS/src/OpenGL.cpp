@@ -28,7 +28,7 @@ GLDebugMessageCallback(GLenum source,
              <<kGLDebugEnumToString.at(type)<<" "
              <<severity<<" "
              <<message<<std::endl;
-    auto& errMessage = errStream.str();
+    auto errMessage = errStream.str();
 
     if (type == GL_DEBUG_TYPE_ERROR)
     {
