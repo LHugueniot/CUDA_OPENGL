@@ -1,7 +1,7 @@
 # generate_plane_with_slash.py
 
-size = 100
-spacing = 0.1
+size = 20
+spacing = 0.5
 half = (size * spacing) / 2
 
 with open("grid_plane.obj", "w") as f:
@@ -13,16 +13,6 @@ with open("grid_plane.obj", "w") as f:
             x = -half + i * spacing
             z = -half + j * spacing
             f.write(f"v {x} 0 {z}\n")
-
-    # Write UVs
-    for i in range(size + 1):
-        for j in range(size + 1):
-            u = i / size
-            v = j / size
-            f.write(f"vt {u} {v}\n")
-
-    # Write normals (all pointing up)
-    f.write("vn 0 1 0\n")
 
     # Write faces
     for i in range(size):

@@ -5,6 +5,7 @@
 
 #include <cassert>
 
+// WTF is this Lucien?
 template <typename T, GLenum GLBufferType = GL_ARRAY_BUFFER>
 struct CuGlBufferSetter
 {
@@ -62,7 +63,7 @@ struct CuGlBufferSetter
         // Get pointer to use, not sure if possible to use outside of mapped scope
         cutilSafeCall(cudaGraphicsResourceGetMappedPointer(
             reinterpret_cast<void **>(devPtr), &size, m_resourceObj));
-        std::cout << "size: " << size << std::endl;
+        //std::cout << "size: " << size << std::endl;
     }
 
     void unMap()

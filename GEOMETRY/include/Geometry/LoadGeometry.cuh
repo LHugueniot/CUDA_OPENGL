@@ -14,10 +14,11 @@
 #include "Utils/Cuda.cuh"
 #include "Utils/OpenGL.h"
 
-constexpr uint kDefaultImportFlags = aiProcess_Triangulate |
-                                     aiProcess_JoinIdenticalVertices |
-                                     aiProcess_ImproveCacheLocality |
-                                     aiProcess_FindInvalidData;
+constexpr uint kDefaultImportFlags = \
+    aiProcess_Triangulate |
+    aiProcess_JoinIdenticalVertices |
+    aiProcess_ImproveCacheLocality |
+    aiProcess_FindInvalidData;
 
 // constexpr uint kDefaultImportFlags = 0;
 
@@ -50,6 +51,7 @@ initGeometryFromAiMeshes(const std::vector<const aiMesh *> &meshes,
         geometries.emplace_back(meshPtr->mName.data, geom);
 
         // Allocate device memory for vertices
+        printf("Num vertices %i", meshPtr->mNumVertices);
         geom->d_nVertexPositionBufferElems = meshPtr->mNumVertices * 3;
         vertexBufferSetter.allocate(&geom->d_vertexPositionBufferData,
                                     geom->d_nVertexPositionBufferElems);

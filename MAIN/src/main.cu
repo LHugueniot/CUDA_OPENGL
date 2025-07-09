@@ -211,9 +211,13 @@ int main(int argv, char **args)
     const aiScene *sceneCache = nullptr;
 
     std::filesystem::path assetDir = std::filesystem::absolute(kAssetDirectory);
-    // std::filesystem::path assetFile = assetDir / "PantherBoss" / "PAN.obj";
-    // std::filesystem::path assetFile = assetDir / "cube_simple.obj";
-    std::filesystem::path assetFile = assetDir / "grid_plane.obj";
+
+    std::string assetName; 
+    // assetName = "PantherBoss/PAN.obj";
+    // assetName = "cube_simple.obj";
+    assetName = "grid_plane.obj";
+    // assetName = "grid_simple.obj";
+     std::filesystem::path assetFile = assetDir / assetName;
 
     std::cout << assetFile << std::endl;
 
@@ -255,6 +259,11 @@ int main(int argv, char **args)
     std::vector<std::pair<std::string, PBDGeometry *>> nameToGeometry =
         initGeometryFromAiMeshes<PBDGeometry>(meshes, vertexBufferSetter, {},
                                               indexBufferSetter);
+
+    // for (auto const& [name, _] : nameToGeometry)
+    // {
+    //     std::cout<<"Geom Name: "<<name<<std::endl;
+    // }
 
     PBDGeometry &cudaCube = *(nameToGeometry[0].second);
 

@@ -10,7 +10,7 @@
 #include <map>
 #include <set>
 #include <vector>
-#include<stdio.h>
+#include <stdio.h>
 
 //#ifndef __cplusplus < 201703L
 // namespace std {

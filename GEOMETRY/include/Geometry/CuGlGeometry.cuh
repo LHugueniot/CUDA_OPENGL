@@ -24,8 +24,8 @@ struct CuGlGeometry
         glGenVertexArrays(1, &m_vao);
         glBindVertexArray(m_vao);
         buffer.d_bufferSize = bufferElemNum;
-        allocate_cugl_buffer(&buffer);
-        set_cugl_buffer(&buffer, h_pBuffer, bufferElemNum);
+        allocateCuGlBuffer(&buffer);
+        setCuGlBuffer(&buffer, h_pBuffer, bufferElemNum);
     }
     CuGlGeometry(std::vector<float> *h_Buffer, // Host side buffer data
                  GLuint *_monoColourShader)
@@ -40,11 +40,11 @@ struct CuGlGeometry
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
         buffer.d_bufferSize = h_Buffer->size();
-        allocate_cugl_buffer(&buffer);
-        set_cugl_buffer(&buffer, h_Buffer);
+        allocateCuGlBuffer(&buffer);
+        setCuGlBuffer(&buffer, h_Buffer);
     }
     GLuint m_vao;
-    cugl_buffer<float> buffer = {};
+    CuGlBuffer<float> buffer = {};
 
     GLuint *monoColourShader;
 

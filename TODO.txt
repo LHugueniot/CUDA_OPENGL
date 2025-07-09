@@ -1,6 +1,8 @@
 TODO:
+* Get Simulation working
+* Refactor CuGlBufferSetter, wtf is this?
+    > NOTE: Purpose not clear, really it should be stateless, and should operate on a "buffer" object for which we can overload the implementation of copy allocate etc... 
+* Consolidate BufferSetter and CuGlBuffer into CuGlBuffer and CuBuffer, with some overloaded funcs to allocate, copy etc
 
-1. Refactor Camera class
-2. Refactor GLFWState
-3. Create a gl_device_vector class, with all the same methods as device_vector,
-    but containing all the info for an opengl interop buffer. Maybe....
+BUGS:
+* Assets with 10201 vertices or more don't work

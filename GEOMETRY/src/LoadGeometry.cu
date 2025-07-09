@@ -1,8 +1,10 @@
 #include "Geometry/LoadGeometry.cuh"
 
-std::vector<const aiMesh *>
-loadAiMeshes(const std::filesystem::path &sceneFilePath,
-             const aiScene **sceneCachePtr, uint importFlags)
+std::vector<const aiMesh *> loadAiMeshes(
+    const std::filesystem::path &sceneFilePath,
+    const aiScene **sceneCachePtr,
+    uint importFlags
+)
 {
     std::ostringstream errStream;
 

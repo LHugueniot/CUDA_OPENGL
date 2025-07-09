@@ -98,11 +98,11 @@ target_link_libraries(
 )
 
 # Asset setup
-set(ASSETS_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ASSETS)
-file(
-    COPY ${CMAKE_CURRENT_SOURCE_DIR}/ASSETS/
-    DESTINATION ${ASSETS_DIRECTORY}
-)
+set(ASSETS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ASSETS)
+# file(
+#     COPY ${CMAKE_CURRENT_SOURCE_DIR}/ASSETS/
+#     DESTINATION ${ASSETS_DIRECTORY}
+# )
 
 # Compile file
 target_compile_definitions(

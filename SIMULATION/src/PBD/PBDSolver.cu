@@ -1,4 +1,5 @@
 #include "Sim/PBD/PBDSolver.cuh"
+#include "Sim/PBD/BufferKernels.cuh"
 #include "Utils/Cuda.cuh"
 
 // PBDGeometry initializePBDGeometryFromHost<FixedVertexIxd_t>(Geometry&
@@ -54,18 +55,36 @@ __global__ void calculateEdgeLengths(float *vertexPositionBufferData,
     dcRestLengthBufferData[threadFlatIdx] = restLength;
 }
 
-bool initializePBDParameters(PBDGeometry &g,
-                             uint *fixedVertexIdxs,
-                             uint nFixedVertexIdxsElems)
+template<typename T>
+void __cumallocopy(
+    uint nBufferElems,
+    T* srcDufferData,
+    T*& dstDufferData,
+    cudaMemcpyKind direction
+)
+{
+    size_t bufferSize = nBufferElems * sizeof(T);
+
+    cutilSafeCall(cudaMalloc(
+        &dstDufferData,
+        bufferSize
+    ));
+
+    cutilSafeCall(cudaMemcpy(
+        dstDufferData,
+        srcDufferData,
+        bufferSize,
+        direction
+    ));
+}
+
+void __setIsVertexFixedBuffer(
+    PBDGeometry &g,
+    uint *fixedVertexIdxs,
+    uint nFixedVertexIdxsElems
+)
 {
     PBDGeometry::PBDData &pd = g.pbdData;
-    if (!g.d_vertexPositionBufferData || g.d_nVertexPositionBufferElems == 0 ||
-        !g.d_edgeIdxBufferData || g.d_nEdgeIdxBufferElems == 0)
-    {
-        WARNING_MSG("Geometry has not been initialized.");
-        return false;
-    }
-
     // Default init to 0
     uint nIsVertexFixedElems = g.d_nVertexPositionBufferElems / (3 * BYTE_BITS);
 
@@ -78,82 +97,43 @@ bool initializePBDParameters(PBDGeometry &g,
     pd.d_nIsVertexFixedBufferElems = nIsVertexFixedElems;
     // redundant ik but consistent
     size_t isVertexFixedBufferSize = nIsVertexFixedElems * sizeof(std::byte);
-    cutilSafeCall(cudaMalloc(&pd.d_isVertexFixedBuffer,
-                             isVertexFixedBufferSize));
-    cutilSafeCall(cudaMemcpy(pd.d_isVertexFixedBuffer,
-                             &isVertexFixed.data()[0],
-                             isVertexFixedBufferSize,
-                             cudaMemcpyDefault));
+    __cumallocopy(
+        nIsVertexFixedElems,
+        &isVertexFixed.data()[0],
+        pd.d_isVertexFixedBuffer,
+        cudaMemcpyDefault
+    );
 
     // Initialize the fixed vertices data
     pd.d_nFixedVertexIdxBufferElems = nFixedVertexIdxsElems;
-    size_t fixedVertexIdxsSize = pd.d_nFixedVertexIdxBufferElems * sizeof(uint);
-    cutilSafeCall(cudaMalloc(&pd.d_fixedVertexIdxBufferData,
-                             fixedVertexIdxsSize));
-    cutilSafeCall(cudaMemcpy(pd.d_fixedVertexIdxBufferData,
-                             fixedVertexIdxs,
-                             fixedVertexIdxsSize,
-                             cudaMemcpyDefault));
+    __cumallocopy(
+        pd.d_nFixedVertexIdxBufferElems,
+        fixedVertexIdxs,
+        pd.d_fixedVertexIdxBufferData,
+        cudaMemcpyDefault
+    );
+}
 
-    // Initialize the distance contraint length data
-    assert(g.d_nEdgeIdxBufferElems % 2 == 0);
-
-    // pd.d_nDcRestLengthBufferElems =
-    //     static_cast<uint>(g.d_nEdgeIdxBufferElems / 2);
-    //
-    // size_t dcRestLengthBufferSize = pd.d_nDcRestLengthBufferElems * sizeof(float);
-    // cudaMalloc(&pd.d_dcRestLengthBufferData,
-    //           dcRestLengthBufferSize);
-    //
-    // uint nEdges = static_cast<uint>(g.d_nEdgeIdxBufferElems / 2);
-    //
-    // calculateEdgeLengths<<<1, nEdges>>>(g.d_vertexPositionBufferData,
-    //                                    g.d_nVertexPositionBufferElems,
-    //                                    g.d_edgeIdxBufferData,
-    //                                    g.d_nEdgeIdxBufferElems,
-    //                                    pd.d_dcRestLengthBufferData);
-
-    //
-    pd.d_nDistanceConstraintsIdxBufferElems = g.d_nEdgeIdxBufferElems;
-    size_t distanceConstraintsIdxBufferSize = pd.d_nDistanceConstraintsIdxBufferElems * sizeof(uint);
-
-    cutilSafeCall(cudaMalloc(&pd.d_distanceConstraintsIdxBufferData,
-                             distanceConstraintsIdxBufferSize));
-
-    cutilSafeCall(cudaMemcpy(pd.d_distanceConstraintsIdxBufferData,
-                             g.d_edgeIdxBufferData,
-                             distanceConstraintsIdxBufferSize,
-                             cudaMemcpyDeviceToDevice));
-
-    size_t edgeIdxBufferSize = g.d_nEdgeIdxBufferElems * sizeof(uint);
-    uint *h_edgeIdxBufferData = new uint[g.d_nEdgeIdxBufferElems];
-    cutilSafeCall(cudaMemcpy(h_edgeIdxBufferData,
-                             g.d_edgeIdxBufferData,
-                             edgeIdxBufferSize,
-                             cudaMemcpyDeviceToHost));
-
-    std::vector<uint> edgeIdxBufferData;
-    edgeIdxBufferData.resize(g.d_nEdgeIdxBufferElems);
-    for (uint i = 0; i < g.d_nEdgeIdxBufferElems; i++)
+void __buildAdjacentEdgeMap(
+    uint const& nEdgeIdxBufferElems,
+    uint const* edgeIdxBufferData,
+    std::map<std::pair<uint, uint>, std::set<std::pair<uint, uint>>>& adgacentEdgeMap,
+    size_t& maxEdgeAdjacencySetSize
+)
+{
+    adgacentEdgeMap.clear();
+    maxEdgeAdjacencySetSize = 0;
+    for (uint i = 0; i < nEdgeIdxBufferElems; i += 2)
     {
-        edgeIdxBufferData[i] = h_edgeIdxBufferData[i];
-    }
-    // Distance constraint graph
-    std::map<std::pair<uint, uint>, std::set<std::pair<uint, uint>>> dcGraph;
+        auto currEdge = makeOrderedIdxPair(edgeIdxBufferData[i], edgeIdxBufferData[i + 1]);
 
-    size_t maxEdgeAdjacencySetSize = 0;
+        const auto [currEdgeItr, success] = adgacentEdgeMap.insert({currEdge, {}});
 
-    for (uint i = 0; i < g.d_nEdgeIdxBufferElems; i += 2)
-    {
-        auto currEdge = makeOrderedIdxPair(h_edgeIdxBufferData[i], h_edgeIdxBufferData[i + 1]);
-
-        const auto [currEdgeItr, success] = dcGraph.insert({currEdge, {}});
-
-        for (auto &[edge, adjEdges] : dcGraph)
+        for (auto &[edge, adjEdges] : adgacentEdgeMap)
         {
             auto &[idx1, idx2] = edge;
             if ((currEdge.first == idx1 || currEdge.first == idx2 ||
-                 currEdge.second == idx1 || currEdge.second == idx2) &&
+                currEdge.second == idx1 || currEdge.second == idx2) &&
                 currEdge != edge)
             {
                 currEdgeItr->second.insert(edge);
@@ -164,17 +144,26 @@ bool initializePBDParameters(PBDGeometry &g,
             }
         }
     }
+}
 
-    std::vector<std::set<std::pair<uint, uint>>> colorSets(maxEdgeAdjacencySetSize + 1);
+void __extractUnAdjacentEdgeSets(
+    size_t maxEdgeAdjacencySetSize,
+    std::map<std::pair<uint, uint>, std::set<std::pair<uint, uint>>>const & adgacentEdgeMap,
+    std::vector<std::set<std::pair<uint, uint>>>& unAdjacentEdgeSets
+)
+{
+    // Graph Coloring algorithm on adjacent edges
+    unAdjacentEdgeSets.clear();
+    unAdjacentEdgeSets.resize(maxEdgeAdjacencySetSize + 1);
 
-    for (auto &[edge, adjEdges] : dcGraph)
+    for (auto &[edge, adjEdges] : adgacentEdgeMap)
     {
-        for (auto &colorSet : colorSets)
+        for (auto &unAdjacentEdgeSet : unAdjacentEdgeSets)
         {
             bool adjEdgeInColorSet = false;
             for (const auto &adjEdge : adjEdges)
             {
-                if (auto search = colorSet.find(adjEdge); search != colorSet.end())
+                if (auto search = unAdjacentEdgeSet.find(adjEdge); search != unAdjacentEdgeSet.end())
                 {
                     adjEdgeInColorSet = true;
                     break;
@@ -184,25 +173,76 @@ bool initializePBDParameters(PBDGeometry &g,
             {
                 continue;
             }
-            colorSet.insert(edge);
+            unAdjacentEdgeSet.insert(edge);
             break;
         }
     }
 
-    for (size_t i = 0; i < colorSets.size();)
+    for (size_t i = 0; i < unAdjacentEdgeSets.size();)
     {
-        auto &colorSet = colorSets[i];
-        if (colorSet.size() == 0)
+        auto &unAdjacentEdgeSet = unAdjacentEdgeSets[i];
+        if (unAdjacentEdgeSet.size() == 0)
         {
-            colorSets.erase(colorSets.begin() + i);
+            unAdjacentEdgeSets.erase(unAdjacentEdgeSets.begin() + i);
         }
         else
         {
             i++;
         }
     }
+}
 
-    pd.d_nDistanceConstraintSets = colorSets.size();
+void __(){}
+
+bool initializePBDParameters(PBDGeometry &g,
+                             uint *fixedVertexIdxs,
+                             uint nFixedVertexIdxsElems)
+{
+    PBDGeometry::PBDData &pd = g.pbdData;
+    if (!g.d_vertexPositionBufferData || g.d_nVertexPositionBufferElems == 0 ||
+        !g.d_edgeIdxBufferData || g.d_nEdgeIdxBufferElems == 0)
+    {
+        WARNING_MSG("Geometry has not been initialized.");
+        return false;
+    }
+
+    __setIsVertexFixedBuffer(g, fixedVertexIdxs, nFixedVertexIdxsElems);
+
+    pd.d_nDistanceConstraintsIdxBufferElems = g.d_nEdgeIdxBufferElems;
+    __cumallocopy(
+        pd.d_nDistanceConstraintsIdxBufferElems,
+        g.d_edgeIdxBufferData,
+        pd.d_distanceConstraintsIdxBufferData,
+        cudaMemcpyDeviceToDevice
+    );
+
+    // TODO(LH): There must be a better way
+    uint *h_edgeIdxBufferData = new uint[g.d_nEdgeIdxBufferElems];
+    cutilSafeCall(cudaMemcpy(h_edgeIdxBufferData,
+                             g.d_edgeIdxBufferData,
+                             g.d_nEdgeIdxBufferElems * sizeof(uint),
+                             cudaMemcpyDeviceToHost));
+
+    // Adjacent edge graph building
+    // For each edge, find adjacent edges,
+    // and also find the edge with most adajacencies
+    size_t maxEdgeAdjacencySetSize = 0;
+    std::map<std::pair<uint, uint>, std::set<std::pair<uint, uint>>> adgacentEdgeMap;
+    __buildAdjacentEdgeMap(
+        g.d_nEdgeIdxBufferElems,
+        h_edgeIdxBufferData,adgacentEdgeMap,
+        maxEdgeAdjacencySetSize
+    );
+
+    // Graph Coloring algorithm on adjacent edges
+    std::vector<std::set<std::pair<uint, uint>>> unAdjacentEdgeSets;
+    __extractUnAdjacentEdgeSets(
+        maxEdgeAdjacencySetSize,
+        adgacentEdgeMap,
+        unAdjacentEdgeSets
+    );
+
+    pd.d_nDistanceConstraintSets = unAdjacentEdgeSets.size();
 
     size_t nDistanceConstraintSetsSize = pd.d_nDistanceConstraintSets * sizeof(uint);
 
@@ -222,17 +262,17 @@ bool initializePBDParameters(PBDGeometry &g,
     cutilSafeCall(cudaMalloc(&pd.d_dcRestLengthSets,
                              dcRestLengthSetsSize));
 
-    for (size_t i = 0; i < colorSets.size(); i++)
+    for (size_t i = 0; i < unAdjacentEdgeSets.size(); i++)
     {
-        auto &colorSet = colorSets[i];
+        auto &unAdjacentEdgeSet = unAdjacentEdgeSets[i];
 
-        uint nColorSetElems = static_cast<uint>(colorSet.size()) * 2;
+        uint nColorSetElems = static_cast<uint>(unAdjacentEdgeSet.size()) * 2;
         cutilSafeCall(cudaMemcpy(&pd.d_nDistanceConstraintsPerSet[i],
                                  &nColorSetElems,
                                  sizeof(uint),
                                  cudaMemcpyHostToDevice));
 
-        uint nRestLengthSetElems = static_cast<uint>(colorSet.size());
+        uint nRestLengthSetElems = static_cast<uint>(unAdjacentEdgeSet.size());
         cutilSafeCall(cudaMemcpy(&pd.d_nDcRestLengthPerSet[i],
                                  &nRestLengthSetElems,
                                  sizeof(uint),
@@ -240,7 +280,7 @@ bool initializePBDParameters(PBDGeometry &g,
 
         std::vector<uint> colorSetVector;
         colorSetVector.reserve(nColorSetElems);
-        for (const auto &edge : colorSet)
+        for (const auto &edge : unAdjacentEdgeSet)
         {
             colorSetVector.push_back(edge.first);
             colorSetVector.push_back(edge.second);
@@ -255,7 +295,7 @@ bool initializePBDParameters(PBDGeometry &g,
                                  distanceConstraintSetSize,
                                  cudaMemcpyHostToDevice));
 
-        size_t dcRestLengthSetSize = colorSet.size() * sizeof(float);
+        size_t dcRestLengthSetSize = unAdjacentEdgeSet.size() * sizeof(float);
         cutilSafeCall(cudaMalloc(&h_dcRestLengthSets[i],
                                  dcRestLengthSetSize));
 
@@ -289,7 +329,7 @@ bool initializePBDParameters(PBDGeometry &g,
     cutilSafeCall(cudaMalloc(&pd.d_vertexMassesBufferData,
                              nVertices * sizeof(float)));
 
-    std::vector<float> vertexMasses(nVertices, 1.f);
+    std::vector<float> vertexMasses(nVertices, 0.001f);
     cutilSafeCall(cudaMemcpy(pd.d_vertexMassesBufferData,
                              vertexMasses.data(),
                              nVertices * sizeof(float),
@@ -430,11 +470,11 @@ __global__ void applyGravity(PBDGeometry g, WorldProperties wp)
 
     uint vertexIdx = threadFlatIdx;
 
-    bool isFixedVerted = getBoolFromPackedBuffer(g.pbdData.d_isVertexFixedBuffer, g.d_nVertexPositionBufferElems / 3, vertexIdx);
+    bool isFixedVertex = getBoolFromPackedBuffer(g.pbdData.d_isVertexFixedBuffer, g.d_nVertexPositionBufferElems / 3, vertexIdx);
 
-    if (isFixedVerted)
+    if (isFixedVertex)
     {
-        printf("applyGravity - vertex index out of range: %i\n", vertexIdx);
+        //printf("applyGravity - fixed vertex: %i\n", vertexIdx);
         return;
     }
 
@@ -448,10 +488,16 @@ __global__ void applyGravity(PBDGeometry g, WorldProperties wp)
     }
 
     ei::Map<ei::Vector3f> vertex(&g.d_vertexPositionBufferData[startIdx]);
+
+    if (threadFlatIdx == 1)
+    {
+        printf("applyGravity - applying gravity: %f\n", (wp.m_gravConstant * wp.m_timeStep)[1]);
+    }
     vertex += wp.m_gravConstant * wp.m_timeStep;
 }
 
 void applyExternalForces(PBDGeometry &g, WorldProperties &wp)
 {
+    printf("applying external forces to %i vertices\n", g.d_nVertexPositionBufferElems);
     applyGravity<<<1, (g.d_nVertexPositionBufferElems / 3)>>>(g, wp);
 }
